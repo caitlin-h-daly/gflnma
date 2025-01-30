@@ -25,6 +25,8 @@
 #' @param lambda_scale a number indicating the desired rescaling power for the
 #'   presentation of lambda (i.e., lambdaRescaled = lambda ^ lambda_scale).
 #'   Default is 1.
+#' @param lambda_scale_digits a number indicating desired number of digits for
+#'   rescaled lambda.
 #' @param lambda_critical a character string, one of "fused", "all", or "best",
 #'   indicating whether vertical dashed lines should be drawn at lambdas for
 #'   which treatments are fused (or unfused), all hitting and leaving points on
@@ -37,8 +39,8 @@
 #'   select the models: one of "AIC", "AICc" (default), "BIC", "BICc".
 #' @param penfit_threshold a number specifying the degrees of freedom threshold
 #'   for which the penalized fit measure should not be computed. See details.
-#' @param digits a vector of numbers indicating desired number of digits for
-#'   lambda, rss, and penalized fit measures, respectively.
+#' @param penfit_digits a number indicating desired number of digits for the
+#'   penalized fit measures.
 #' @param par_groups a list of lists of grouped indices corresponding to sets of
 #'   of parameters to be plotted separately.
 #'
@@ -47,11 +49,12 @@
 #'
 tabulate_single_solution_path <- function(x,
                                           lambda_scale,
+                                          lambda_scale_digits,
                                           lambda_critical,
                                           full_rss,
                                           penfit,
                                           penfit_threshold,
-                                          digits,
+                                          penfit_digits,
                                           par_groups
                                           ) {
 
@@ -79,17 +82,6 @@ tabulate_single_solution_path <- function(x,
   ll[["lambda"]] <- fit_summary[, "lambda"]
   ll[["rss"]] <- fit_summary[, "rss"]
 
-  # If the network is connected (via x$bls the least square solution), add
-  # summary statistics for full model
-  if(!is.null(x$bls) & is.na(full_rss)) {
-    warning("RSS of full model not specified. Please specify to include full
-            model summary statistics in table.")
-  } else if(!is.null(x$bls) & !is.na(full_rss)) {
-    ll[["df"]][dim(fit_summary)[1] + 1] <- dim(x$beta)[1]
-    ll[["lambda"]][dim(fit_summary)[1] + 1] <- 0
-    ll[["rss"]][dim(fit_summary)[1] + 1] <- as.numeric(full_rss)
-  }
-
   # Remove any models that do not meet the threshold for consideration
   if(is.null(penfit_threshold)) {
     # If the user has not specified a threshold, check to see if df >= M - 1
@@ -102,13 +94,13 @@ tabulate_single_solution_path <- function(x,
       # Remove these models from the fit statistics
       ll <- lapply(ll, function(x) x[-ind_penfit_threshold])
       # Remove the coefficient estimates from these models as well
-      if(!is.null(x$bls) & !is.na(full_rss)){
+      #if(!is.null(x$bls) & !is.na(full_rss)){
         # if the statistics for the full model have been added, it should not be
         # indexed for removal from x$beta
-        x[["beta"]] <- x[["beta"]][, -ind_penfit_threshold[-length(ind_penfit_threshold)]]
-      } else {
+        #x[["beta"]] <- x[["beta"]][, -ind_penfit_threshold[-length(ind_penfit_threshold)]]
+      #} else {
         x[["beta"]] <- x[["beta"]][, -ind_penfit_threshold]
-      }
+      #}
     }
   } else {
     # Check to see if any of the models fall outside the user's set consider-
@@ -120,13 +112,13 @@ tabulate_single_solution_path <- function(x,
       # Remove these models from the fit statistics
       ll <- lapply(ll, function(x) x[-ind_penfit_threshold])
       # Remove the coefficient estimates from these models as well
-      if(!is.null(x$bls) & !is.na(full_rss)) {
+      #if(!is.null(x$bls) & !is.na(full_rss)) {
         # if the statistics for the full model have been added, it should not be
         # indexed for removal from x$beta
-        x[["beta"]] <- x[["beta"]][, -ind_penfit_threshold[-length(ind_penfit_threshold)]]
-      } else {
+      #  x[["beta"]] <- x[["beta"]][, -ind_penfit_threshold[-length(ind_penfit_threshold)]]
+     # } else {
         x[["beta"]] <- x[["beta"]][, -ind_penfit_threshold]
-      }
+      #}
     }
   }
 
@@ -139,7 +131,7 @@ tabulate_single_solution_path <- function(x,
   ll[["deltaAICc"]] <- ll[["AICc"]] - ll[["AICc"]][which(ll[["AICc"]] == min(ll[["AICc"]]))]
 
   # Calculate BIC and deltaBIC
-  ll[["BIC"]] <- log(length(x$y))*ll[["df"]] + ll[["rss"]]
+  ll[["BIC"]] <- (log(length(x$y)) * ll[["df"]]) + ll[["rss"]]
   ll[["deltaBIC"]] <- ll[["BIC"]] - ll[["BIC"]][which(ll[["BIC"]] == min(ll[["BIC"]]))]
 
   # Calculate BICc and deltaBICc
@@ -148,38 +140,26 @@ tabulate_single_solution_path <- function(x,
 
   # Add lists of pooled parameters
   ll[["PooledGroups"]] <- unname(apply(x$beta, 2, FUN = get_groupings, par_groups))
-  # If the network is connected and the full model has not been removed from
-  # table, add pooled parameter groups
-  if(!is.null(x$bls) & !is.na(full_rss) & !exists("ind_penfit_threshold")) {
-    ll[["PooledGroups"]][length(ll[["lambda"]])[1]] <- paste0("{",
-                                                              rep(names(par_groups),
-                                                                  each = length(par_groups$d) + 1),
-                                                              "_",
-                                                              1:(length(par_groups$d) + 1),
-                                                              "}",
-                                                              collapse = ",")
-  }
 
-  # Recale lambda
+  # Rescale lambda
   if(lambda_scale != 1) {
     ll[[paste0("lambda_pow",lambda_scale)]] <- ll[["lambda"]] ^ lambda_scale
-    if(!is.null(digits[1])) {
-      ll[[paste0("lambda_pow",lambda_scale)]] <- round(ll[[paste0("lambda_pow", lambda_scale)]], digits = digits[1])
+    if(!is.null(lambda_scale_digits)) {
+      ll[[paste0("lambda_pow",lambda_scale)]] <- round(ll[[paste0("lambda_pow", lambda_scale)]],
+                                                       digits = lambda_scale_digits)
     }
   }
 
   # Round numeric values
-  if(!is.null(digits)) {
-    ll[["lambda"]] <- round(ll[["lambda"]], digits = digits[1])
-    ll[["rss"]] <- round(ll[["rss"]], digits = digits[2])
-    ll[["AIC"]] <- round(ll[["AIC"]], digits = digits[3])
-    ll[["AICc"]] <- round(ll[["AICc"]], digits = digits[3])
-    ll[["deltaAIC"]] <- round(ll[["deltaAIC"]], digits = digits[3])
-    ll[["deltaAICc"]] <- round(ll[["deltaAICc"]], digits = digits[3])
-    ll[["BIC"]] <- round(ll[["BIC"]], digits = digits[3])
-    ll[["BICc"]] <- round(ll[["BICc"]], digits = digits[3])
-    ll[["deltaBIC"]] <- round(ll[["deltaBIC"]], digits = digits[3])
-    ll[["deltaBICc"]] <- round(ll[["deltaBICc"]], digits = digits[3])
+  if(!is.null(penfit_digits)) {
+    ll[["AIC"]] <- round(ll[["AIC"]], digits = penfit_digits)
+    ll[["AICc"]] <- round(ll[["AICc"]], digits = penfit_digits)
+    ll[["deltaAIC"]] <- round(ll[["deltaAIC"]], digits = penfit_digits)
+    ll[["deltaAICc"]] <- round(ll[["deltaAICc"]], digits = penfit_digits)
+    ll[["BIC"]] <- round(ll[["BIC"]], digits = penfit_digits)
+    ll[["BICc"]] <- round(ll[["BICc"]], digits = penfit_digits)
+    ll[["deltaBIC"]] <- round(ll[["deltaBIC"]], digits = penfit_digits)
+    ll[["deltaBICc"]] <- round(ll[["deltaBICc"]], digits = penfit_digits)
   }
 
   # Convert list into data.frame

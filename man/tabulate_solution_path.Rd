@@ -7,11 +7,12 @@
 tabulate_solution_path(
   x,
   lambda_scale = 1,
+  lambda_scale_digits = 3,
   lambda_critical = "fused",
   full_rss = NA,
   penfit = "AICc",
   penfit_threshold = NULL,
-  digits = c(3, 2, 2),
+  penfit_digits = 4,
   par_groups = NULL
 )
 }
@@ -21,6 +22,9 @@ tabulate_solution_path(
 \item{lambda_scale}{a number indicating the desired rescaling power for the
 presentation of lambda (i.e., lambdaRescaled = lambda ^ lambda_scale).
 Default is 1.}
+
+\item{lambda_scale_digits}{a number indicating desired number of digits for
+rescaled lambda. Default is 3.}
 
 \item{lambda_critical}{a character string, one of "fused", "all", or "best",
 indicating whether vertical dashed lines should be drawn at lambdas for
@@ -38,8 +42,8 @@ select the models: one of "AIC", "AICc" (default), "BIC", "BICc".}
 \item{penfit_threshold}{a number specifying the degrees of freedom threshold
 for which the penalized fit measure should not be computed. See details.}
 
-\item{digits}{a vector of numbers indicating desired number of digits for
-lambda, rss, and penalized fit measures, respectively.}
+\item{penfit_digits}{a number indicating desired number of digits for the
+penalized fit measures. Default is 4.}
 
 \item{par_groups}{a list of lists of grouped indices corresponding to sets of
 of parameters (e.g., d, b1, b2, ...).}

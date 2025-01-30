@@ -143,7 +143,7 @@ Let's summarize the results.
 ```{r}
 
 mod_sum <- tabulate_solution_path(mod$solution, 
-                                      digits = c(3, 3, 3),
+                                      penfit_digits = 3,
                                       par_groups = mod$par_groups)
 
 head(mod_sum_df <- mod_sum$mod_sum_df)
@@ -194,7 +194,7 @@ Let's now fit an NMR model with this parameter configuration.
 First re-code the treatments and treatment-covariate interactions
 
 ```{r}
-best_lambda <- selected_gflnma_sum[which(selected_gflnma_sum["deltaAICc"]==0), ]$lambda
+best_lambda <- round(selected_gflnma_sum[which(selected_gflnma_sum["deltaAICc"]==0), ]$lambda, 3)
 best_param_est <- selected_gflnma$beta[, paste0(best_lambda)]
 
 dat <- recode_gfl_params(param_est = best_param_est, 
