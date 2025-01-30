@@ -1,7 +1,7 @@
 #' Solve one or more GFL-NMA or GFL-NMR models
 #'
 #' @description
-#' `solve_gfl()` constructs one or more penalty matrix based on inputted
+#' `solve_gflnma()` constructs one or more penalty matrix based on inputted
 #' `gamma` and calls on `genlasso::genlasso()` to compute the solution path of
 #' the generalized fused lasso problem(s).
 #'

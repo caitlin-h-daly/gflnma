@@ -20,7 +20,7 @@
 #' unique treatments.
 #' @export
 #'
-get_design_matrix = function(treatment1, treatment2, ref) {
+get_design_matrix <- function(treatment1, treatment2, ref) {
 
   # Recode the treatments with sequential numbers to determine their position
   # in the design matrix

@@ -76,7 +76,7 @@ A nested list of
 }
 }
 \description{
-\code{solve_gfl()} constructs one or more penalty matrix based on inputted
+\code{solve_gflnma()} constructs one or more penalty matrix based on inputted
 \code{gamma} and calls on \code{genlasso::genlasso()} to compute the solution path of
 the generalized fused lasso problem(s).
 }
