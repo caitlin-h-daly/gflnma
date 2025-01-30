@@ -33,8 +33,7 @@ the dual path boundary (see Tibshirani and Taylor 2016), or the best
 fitting model based on AICc (i.e., the one with the smallest AICc). Default
 is "fuse".}
 
-\item{full_rss}{a number indicating the RSS of the full model (in the case of
-a connected network).}
+\item{full_rss}{a number indicating the RSS of the full model (if estimable).}
 
 \item{penfit}{a string indicating which penalized fit measure will be used to
 select the models: one of "AIC", "AICc" (default), "BIC", "BICc".}

@@ -33,8 +33,7 @@
 #'   the dual path boundary (see Tibshirani and Taylor 2016), or the best
 #'   fitting model based on AICc (i.e., the one with the smallest AICc). Default
 #'   is "fuse".
-#' @param full_rss a number indicating the RSS of the full model (in the case of
-#'   a connected network).
+#' @param full_rss a number indicating the RSS of the full model (if estimable).
 #' @param penfit a string indicating which penalized fit measure will be used to
 #'   select the models: one of "AIC", "AICc" (default), "BIC", "BICc".
 #' @param penfit_threshold a number specifying the degrees of freedom threshold
