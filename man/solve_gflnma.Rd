@@ -61,7 +61,8 @@ the d's at which the solution path should terminate. Default is 0.}
 
 \item{gamma}{a vector of numeric values > 0 indicating the desired ratio of
 the penalty for interaction terms (beta's) to the penalty for the relative
-treatment effects (d's).}
+treatment effects (d's). If only interaction terms are to be penalized,
+input \code{Inf} (no quotes).}
 
 \item{eps}{a vector of numeric values > 0 indicating the desired
 multiplier(s) for the ridge penalty, which will be implemented if there are
@@ -72,7 +73,7 @@ data. Default is 0.0001.}
 A nested list of
 \itemize{
 \item \code{solution}: a nested list of multiple \code{genlasso::genlasso} objects.
-\item \code{par_groups}: a list of lists of parameter indices.
+\item \code{par_groups}: a list of lists of parameter indices (excluding reference).
 }
 }
 \description{

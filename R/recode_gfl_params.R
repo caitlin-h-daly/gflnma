@@ -7,7 +7,8 @@
 #' @param param_est a vector containing the parameter estimates of the desired
 #'   pooled model.
 #' @param gfl_dat data frame from `prep_gfl_data`.
-#' @param par_groups a list of parameter indices in the full model.
+#' @param par_groups a list of parameter indices (excluding reference) in the
+#'   full model.
 #'
 #' @return a data frame that contains data in `gfl_dat`, along with appended
 #' grouped parameter codes.

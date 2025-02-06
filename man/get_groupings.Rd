@@ -12,7 +12,7 @@ effects vs. reference treatment + treatment-covariate interactions) in a
 network of T treatments, where P covariates have been adjusted for.}
 
 \item{par_groups}{a list of lists of grouped indicies corresponding to sets
-of parameters to be pooled within but not between.}
+of parameters (excluding reference) to be pooled within but not between.}
 
 \item{pool_format}{a logical indicating whether pooled parameters should be
 presented as a character string (TRUE) or list (FALSE). Default is TRUE.}

@@ -23,7 +23,7 @@
 #' @param penfit_digits a number indicating desired number of digits for the
 #'   penalized fit measures. Default is 4.
 #' @param par_groups a list of lists of grouped indices corresponding to sets of
-#'   of parameters (e.g., d, b1, b2, ...).
+#'   of parameters (excluding reference) (e.g., d, b1, b2, ...).
 #'
 #' @return A list or data frame summarizing the degrees of freedom, lambda, RSS,
 #' AIC, AICc, BIC, BICc, and parameter groupings.

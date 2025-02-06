@@ -41,7 +41,7 @@
 #' @param penfit_digits a number indicating desired number of digits for the
 #'   penalized fit measures.
 #' @param par_groups a list of lists of grouped indices corresponding to sets of
-#'   of parameters to be plotted separately.
+#'   of parameters (excluding reference) to be plotted separately.
 #'
 #' @return A data frame summarizing the df, lambda, RSS, AIC, AICc and treatment
 #'   groupings.

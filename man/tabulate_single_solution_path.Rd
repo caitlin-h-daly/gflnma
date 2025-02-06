@@ -45,7 +45,7 @@ for which the penalized fit measure should not be computed. See details.}
 penalized fit measures.}
 
 \item{par_groups}{a list of lists of grouped indices corresponding to sets of
-of parameters to be plotted separately.}
+of parameters (excluding reference) to be plotted separately.}
 }
 \value{
 A data frame summarizing the df, lambda, RSS, AIC, AICc and treatment

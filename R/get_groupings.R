@@ -8,7 +8,7 @@
 #'   effects vs. reference treatment + treatment-covariate interactions) in a
 #'   network of T treatments, where P covariates have been adjusted for.
 #' @param par_groups a list of lists of grouped indicies corresponding to sets
-#'   of parameters to be pooled within but not between.
+#'   of parameters (excluding reference) to be pooled within but not between.
 #' @param pool_format a logical indicating whether pooled parameters should be
 #'   presented as a character string (TRUE) or list (FALSE). Default is TRUE.
 #'
@@ -21,7 +21,7 @@ get_groupings <- function(par_est, par_groups = NULL, pool_format = TRUE) {
   if(is.null(par_groups)) {
     # If list of parameter groups is not provided, create a list of length 1
     par_groups <- list()
-    par_groups$Parameters <- list(1:length(par_est) + 1)
+    par_groups$Parameters <- 1:length(par_est)
   }
 
   # Create a nested list of the parameter poolings
@@ -53,7 +53,7 @@ get_groupings <- function(par_est, par_groups = NULL, pool_format = TRUE) {
                                         FALSE)
 
       # Group the nearly equal parameter estimates
-      par_pool_list[[pool_index]] <- par_unpooled[which(par_unpooled[,"match"] == TRUE),
+      par_pool_list[[pool_index]] <- par_unpooled[which(par_unpooled[, "match"] == TRUE),
                                                   "par_index"]
 
       # Remaining parameters to group

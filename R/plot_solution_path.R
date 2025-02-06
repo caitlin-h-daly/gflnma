@@ -29,7 +29,8 @@
 #'   delta_`penfit` values corresponding to models the user is willing to
 #'   consider. Default is NULL.
 #' @param par_groups an optional list of lists of grouped indicies corresponding
-#'   to sets of parameters to be plotted separately (e.g., d, b1, b2, ...).
+#'   to sets of parameters (excluding reference) to be plotted separately
+#'   (e.g., d, b1, b2, ...).
 #' @param xlimits numeric vector of length 2, giving the x coordinates range.
 #' @param ylimits numeric vector of length 2, giving the y coordinates range.
 #'
@@ -77,7 +78,7 @@ plot_solution_path <- function(gfl_soln,
   if(is.null(par_groups)) {
     # If list of parameter groups is not provided, create a list of length 1
     par_groups <- list()
-    par_groups$Parameters <- list(1:nrow(gfl_soln$beta))
+    par_groups$Parameters <- 1:nrow(gfl_soln$beta)
   }
 
   # To label the parameters properly, keep track of the index of the previously
@@ -88,14 +89,12 @@ plot_solution_path <- function(gfl_soln,
   for(i in 1:length(par_groups)) {
 
     # Line colours
-    # Number of lines excludes ref parameter (i) from each parameter list
-    cols <- rainbow(n = nrow(gfl_soln$beta[par_groups[[i]][-1] - i, ]),
+    cols <- rainbow(n = nrow(gfl_soln$beta[par_groups[[i]], ]),
                     start = 1/6)  # exclude red
 
     # Solution path
     matplot(x = gfl_soln$lambda,
-            # Exclude ref parameter (i) from each parameter list
-            y = t(gfl_soln$beta[par_groups[[i]][-1] - i, ]),
+            y = t(gfl_soln$beta[par_groups[[i]], ]),
             type = "l",
             col = cols,
             lty = 1,
@@ -117,23 +116,23 @@ plot_solution_path <- function(gfl_soln,
     # Add parameter labels to lines
     if(names(par_groups)[i] == "Parameters") {
       text(x = -0.25,
-           y = gfl_soln$beta[par_groups[[i]][-1] - i, ncol(gfl_soln$beta)],
-           par_groups[[i]][-1])
+           y = gfl_soln$beta[par_groups[[i]], ncol(gfl_soln$beta)],
+           par_groups[[i]] + 1)
     } else {
       text(x = -0.25,
-           y = gfl_soln$beta[par_groups[[i]][-1] - i, ncol(gfl_soln$beta)],
-           paste0(names(par_groups)[i], "_", (par_groups[[i]][-1]) - par_ind))
+           y = gfl_soln$beta[par_groups[[i]], ncol(gfl_soln$beta)],
+           paste0(names(par_groups)[i], "_", (par_groups[[i]] + 1) - par_ind))
     }
 
     legend("right",
            # List treatments in order of parameter estimates at smallest lambda
            legend = paste0(names(par_groups)[i],
                            "_",
-                           order(gfl_soln$beta[par_groups[[i]][-1] - i,
+                           order(gfl_soln$beta[par_groups[[i]],
                                                ncol(gfl_soln$beta)],
                                  decreasing = TRUE) + 1),
            # Assign colours by parameter estimates at smallest lambda
-           col = cols[order(gfl_soln$beta[par_groups[[i]][-1] - i,
+           col = cols[order(gfl_soln$beta[par_groups[[i]],
                                           ncol(gfl_soln$beta)],
                             decreasing = TRUE)],
            lty = 1)
@@ -155,7 +154,7 @@ plot_solution_path <- function(gfl_soln,
 
     # To label the parameters properly, keep track of the index of the
     # previously plotted parameters
-    par_ind <- par_ind + length(unlist(par_groups[[i]]))
+    par_ind <- par_ind + length(par_groups[[i]])
 
   }
 

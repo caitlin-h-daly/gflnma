@@ -45,7 +45,7 @@ for which the penalized fit measure should not be computed. See details.}
 penalized fit measures. Default is 4.}
 
 \item{par_groups}{a list of lists of grouped indices corresponding to sets of
-of parameters (e.g., d, b1, b2, ...).}
+of parameters (excluding reference) (e.g., d, b1, b2, ...).}
 }
 \value{
 A list or data frame summarizing the degrees of freedom, lambda, RSS,

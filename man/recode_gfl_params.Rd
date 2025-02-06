@@ -12,7 +12,8 @@ pooled model.}
 
 \item{gfl_dat}{data frame from \code{prep_gfl_data}.}
 
-\item{par_groups}{a list of parameter indices in the full model.}
+\item{par_groups}{a list of parameter indices (excluding reference) in the
+full model.}
 }
 \value{
 a data frame that contains data in \code{gfl_dat}, along with appended

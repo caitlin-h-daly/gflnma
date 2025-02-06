@@ -33,7 +33,8 @@ delta_\code{penfit} values corresponding to models the user is willing to
 consider. Default is NULL.}
 
 \item{par_groups}{an optional list of lists of grouped indicies corresponding
-to sets of parameters to be plotted separately (e.g., d, b1, b2, ...).}
+to sets of parameters (excluding reference) to be plotted separately
+(e.g., d, b1, b2, ...).}
 
 \item{xlimits}{numeric vector of length 2, giving the x coordinates range.}
 
