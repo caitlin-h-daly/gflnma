@@ -36,7 +36,8 @@
 #'   the d's at which the solution path should terminate. Default is 0.
 #' @param gamma a vector of numeric values > 0 indicating the desired ratio of
 #'   the penalty for interaction terms (beta's) to the penalty for the relative
-#'   treatment effects (d's).
+#'   treatment effects (d's). If only interaction terms are to be penalized,
+#'   input `Inf` (no quotes).
 #' @param eps a vector of numeric values > 0 indicating the desired
 #'   multiplier(s) for the ridge penalty, which will be implemented if there are
 #'   some parameters for which there is no direct nor indirect evidence in the
@@ -44,7 +45,7 @@
 #'
 #' @return A nested list of
 #'   * `solution`: a nested list of multiple `genlasso::genlasso` objects.
-#'   * `par_groups`: a list of lists of parameter indices.
+#'   * `par_groups`: a list of lists of parameter indices (excluding reference).
 #' @export
 #'
 solve_gflnma <- function(y,
@@ -90,10 +91,31 @@ solve_gflnma <- function(y,
 
     # First need to get gamma-specific penalty matrix
     penalty_matrix <- get_penalty_matrix(X_d)
+
+    # if(gamma[i] == Inf | gamma[i] == "Inf"){
+    #   gamma[i] <- Inf
+    #   warning("The relative effects have not been penalized.")
+    #   penalty_matrix <- matrix(0,
+    #                            nrow = nrow(penalty_matrix),
+    #                            ncol = ncol(penalty_matrix))
+    # }
+
     if(exists("X_beta")) {
-      penalty_matrix_beta <- get_penalty_matrix(X_beta, x_cov, gamma = gamma[i])
-      penalty_matrix <- as.matrix(Matrix::bdiag(penalty_matrix,
-                                                penalty_matrix_beta))
+
+      if(gamma[i] == Inf | gamma[i] == "Inf"){
+        gamma[i] <- Inf
+        warning("The relative effects have not been penalized.")
+        penalty_matrix_beta <- get_penalty_matrix(X_beta, x_cov, gamma = 1)
+        penalty_matrix <- cbind(matrix(0,
+                                       nrow = nrow(penalty_matrix_beta),
+                                       ncol = ncol(penalty_matrix)),
+                                penalty_matrix_beta)
+      } else {
+        penalty_matrix_beta <- get_penalty_matrix(X_beta, x_cov, gamma = gamma[i])
+        penalty_matrix <- as.matrix(Matrix::bdiag(penalty_matrix,
+                                                  penalty_matrix_beta))
+      }
+
       colnames(penalty_matrix) <- c(paste0("d_", 1:ncol(X_d) + 1),
                                     paste0("beta",
                                            rep(1:dim(x_cov)[2],
@@ -101,6 +123,7 @@ solve_gflnma <- function(y,
                                            "_",
                                            1:(ncol(X_beta) / dim(x_cov)[2]) + 1))
     }
+
 
     for(j in 1:length(eps)) {
 
@@ -116,7 +139,6 @@ solve_gflnma <- function(y,
       index <- index + 1
 
     }
-
   }
 
   # Note indices of d's and beta's in parameter list so we may consider their summaries separately
