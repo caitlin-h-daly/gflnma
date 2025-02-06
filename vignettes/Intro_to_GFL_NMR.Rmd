@@ -144,7 +144,7 @@ mod <- solve_gflnma(y, var_cov, x_cov = x_cov,
                     minlam = 0, gamma = Inf, eps = 0.5)
 
 # Summarize GFL-NMR model fit statistics
-(mod_sum <- tabulate_solution_path(mod$solution, par_groups = mod$par_groups))
+mod_sum <- tabulate_solution_path(mod$solution, par_groups = mod$par_groups)
 
 mod_sum$mod_sum_df
 ```
