@@ -20,21 +20,45 @@
 #'   (`treatment2` vs. `treatment1`).
 #' @param ref a single character string indicating the code (or name) of the
 #'   network reference class.
+#' @param center either a logical value or a numeric vector  of equal length to
+#'   the number of covariates indicating whether covariates should be centered
+#'   by their means (TRUE, the default), centered by specific values supplied in
+#'   the numeric vector, or not at all (FALSE).
+#' @param rescale either a logical value or a numeric vector  of equal length to
+#'   the number of covariates indicating whether covariates should be scaled
+#'   by their standard deviation (TRUE, the default), scaled by specific values
+#'   supplied in the numeric vector, or not at all (FALSE).
 #'
 #' @return A matrix where the number of rows equals the that of `x_cov`, and the
 #' number of columns equals (C-1)*P in a network of C unique classes (where C =
 #' T, the number of unique treatments, if interaction terms at treatment-level).
 #' @export
 #'
-get_cov_design_matrix <- function(x_cov, class1, class2, ref) {
+get_cov_design_matrix <- function(x_cov, class1, class2, ref,
+                                  center = TRUE, rescale = TRUE) {
 
   # Design matrix for contrasts at desired class-level (which could = treatment)
   X_class <- get_design_matrix(class1, class2, ref)
   # X_class <- matrix(replicate(ncol(x_cov), X_class),
   #                   ncol = ncol(x_cov) * ncol(X_class))
 
-  # Standardize the covariates
-  x_cov <- (x_cov - colMeans(x_cov)) / apply(x_cov, 2, sd)
+  # Center the covariates
+  if(center == TRUE) {
+    x_cov <- sweep(x_cov, MARGIN = 2, STATS = colMeans(x_cov), FUN = "-")
+  } else if(is.numeric(center) & length(center) == ncol(x_cov)) {
+    x_cov <- sweep(x_cov, MARGIN = 2, STATS = center, FUN = "-")
+  } else if(is.numeric(center) & length(center) != ncol(x_cov)){
+    error("length(`center`) does not equal number of columns of `x_cov`")
+  }
+
+  # Scale the covariates
+  if(rescale == TRUE) {
+    x_cov <- sweep(x_cov, MARGIN = 2, STATS = apply(x_cov, 2, sd), FUN = "/")
+  } else if(is.numeric(rescale) & length(rescale) == ncol(x_cov)) {
+    x_cov <- sweep(x_cov, MARGIN = 2, STATS = rescale, FUN = "/")
+  } else if(is.numeric(rescale) & length(rescale) != ncol(x_cov)){
+    error("length(`rescale`) does not equal number of columns of `x_cov`")
+  }
 
   # Design matrix that incorporates the covariates to adjust for
   X_cov <- matrix(nrow = nrow(x_cov), ncol = ncol(X_class) * ncol(x_cov))
@@ -45,10 +69,7 @@ get_cov_design_matrix <- function(x_cov, class1, class2, ref) {
       param_index <- param_index + ncol(X_class)
     }
   }
-  # # Alternative code
-  # # Replicate x_cov to perform Hadamard product
-  # x_cov_rep <- matrix(replicate(ncol(X_class), x_cov), ncol = ncol(X_class))
-  # X_cov <- x_cov_rep * X_class
+
   colnames(X_cov) <- paste0("beta",
                             rep(1:dim(x_cov)[2], each = ncol(X_class)),
                             "_",

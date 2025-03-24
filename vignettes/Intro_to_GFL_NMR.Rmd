@@ -102,7 +102,8 @@ mod <- solve_gflnma(y, var_cov, x_cov = x_cov,
                     treatment2 = dat$treat2, 
                     ref = "1",
                     class1 = NULL, class2 = NULL, ref_class = NULL,
-                    minlam = 0, gamma = 1, eps = 0.5)
+                    minlam = 0, gamma = 1, eps = 0.5,
+                    center = TRUE, rescale = TRUE)
 ```
 
 We can summarize the solution path with `tabulate_solution_path()`. 
@@ -141,7 +142,8 @@ mod <- solve_gflnma(y, var_cov, x_cov = x_cov,
                     treatment2 = dat$treat2, 
                     ref = "1",
                     class1 = NULL, class2 = NULL, ref_class = NULL,
-                    minlam = 0, gamma = Inf, eps = 0.5)
+                    minlam = 0, gamma = Inf, eps = 0.5,
+                    center = TRUE, scale = TRUE)
 
 # Summarize GFL-NMR model fit statistics
 mod_sum <- tabulate_solution_path(mod$solution, par_groups = mod$par_groups)
@@ -178,7 +180,9 @@ mod <- solve_gflnma(y,
                     treatment2 = dat$treat2, 
                     ref = "1", 
                     gamma = gamma, 
-                    eps = eps)
+                    eps = eps,
+                    center = TRUE,
+                    scale = TRUE)
 ```
 
 Let's summarize the results. 
@@ -256,7 +260,9 @@ X_d = get_design_matrix(dat$treat1_gfl, dat$treat2_gfl, ref = "1")
 X_b <- gflnma:::get_cov_design_matrix(x_cov, 
                                       class1 = dat$treat1_beta1_gfl, 
                                       class2 = dat$treat2_beta1_gfl, 
-                                      ref = "1")
+                                      ref = "1",
+                                      center = TRUE,
+                                      rescale = TRUE)
 X_gfl = cbind(X_d, X_b)
 colnames(X_gfl) <- c(paste0("d_", 1:ncol(X_d) + 1), 
                      paste0("b", 1:dim(x_cov)[2], "_", 1:ncol(X_b) + 1))

@@ -42,6 +42,13 @@
 #'   multiplier(s) for the ridge penalty, which will be implemented if there are
 #'   some parameters for which there is no direct nor indirect evidence in the
 #'   data. Default is 0.0001.
+#' @param center either a logical value or a numeric vector  of equal length to
+#'   the number of covariates indicating whether covariates should be centered
+#'   by their means (TRUE, the default), centered by specific values supplied in
+#'   the numeric vector, or not at all (FALSE).
+#' @param rescale either a logical value or a numeric vector  of equal length to
+#'   the number of covariates indicating whether covariates should be scaled
+#'   by their standard deviation (TRUE, the default), scaled by specific values
 #'
 #' @return A nested list of
 #'   * `solution`: a nested list of multiple `genlasso::genlasso` objects.
@@ -59,7 +66,9 @@ solve_gflnma <- function(y,
                          ref_class = NULL,
                          minlam = 0,
                          gamma,
-                         eps = 0.0001) {
+                         eps = 0.0001,
+                         center = TRUE,
+                         rescale = TRUE) {
 
   # Obtain weight matrix via upper triangular factor in a Cholesky decomposition
   # of the inverse var_cov matrix
@@ -74,9 +83,11 @@ solve_gflnma <- function(y,
   if(!is.null(x_cov)) {
     # Determine the class-covariate or treatment-covariate interaction terms
     if(!is.null(class1) & !is.null(class2) & !is.null(ref_class)) {
-      X_beta <- get_cov_design_matrix(x_cov, class1, class2, ref_class)
+      X_beta <- get_cov_design_matrix(x_cov, class1, class2, ref_class,
+                                      center, rescale)
     } else {
-      X_beta <- get_cov_design_matrix(x_cov, treatment1, treatment2, ref)
+      X_beta <- get_cov_design_matrix(x_cov, treatment1, treatment2, ref,
+                                      center, rescale)
     }
     X <- cbind(X_d, X_beta)
   } else {

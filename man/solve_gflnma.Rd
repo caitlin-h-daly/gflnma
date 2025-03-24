@@ -16,7 +16,9 @@ solve_gflnma(
   ref_class = NULL,
   minlam = 0,
   gamma,
-  eps = 1e-04
+  eps = 1e-04,
+  center = TRUE,
+  rescale = TRUE
 )
 }
 \arguments{
@@ -68,6 +70,15 @@ input \code{Inf} (no quotes).}
 multiplier(s) for the ridge penalty, which will be implemented if there are
 some parameters for which there is no direct nor indirect evidence in the
 data. Default is 0.0001.}
+
+\item{center}{either a logical value or a numeric vector  of equal length to
+the number of covariates indicating whether covariates should be centered
+by their means (TRUE, the default), centered by specific values supplied in
+the numeric vector, or not at all (FALSE).}
+
+\item{rescale}{either a logical value or a numeric vector  of equal length to
+the number of covariates indicating whether covariates should be scaled
+by their standard deviation (TRUE, the default), scaled by specific values}
 }
 \value{
 A nested list of

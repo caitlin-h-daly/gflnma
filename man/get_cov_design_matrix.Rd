@@ -4,7 +4,14 @@
 \alias{get_cov_design_matrix}
 \title{Determine the design matrix representing the direct evidence in the network}
 \usage{
-get_cov_design_matrix(x_cov, class1, class2, ref)
+get_cov_design_matrix(
+  x_cov,
+  class1,
+  class2,
+  ref,
+  center = TRUE,
+  rescale = TRUE
+)
 }
 \arguments{
 \item{x_cov}{a matrix containing the observed study-level covariate values
@@ -24,6 +31,16 @@ the intervention's class for each relative treatment effect in \code{y}
 
 \item{ref}{a single character string indicating the code (or name) of the
 network reference class.}
+
+\item{center}{either a logical value or a numeric vector  of equal length to
+the number of covariates indicating whether covariates should be centered
+by their means (TRUE, the default), centered by specific values supplied in
+the numeric vector, or not at all (FALSE).}
+
+\item{rescale}{either a logical value or a numeric vector  of equal length to
+the number of covariates indicating whether covariates should be scaled
+by their standard deviation (TRUE, the default), scaled by specific values
+supplied in the numeric vector, or not at all (FALSE).}
 }
 \value{
 A matrix where the number of rows equals the that of \code{x_cov}, and the
