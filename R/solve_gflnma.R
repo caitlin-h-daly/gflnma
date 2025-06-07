@@ -138,16 +138,25 @@ solve_gflnma <- function(y,
 
     for(j in 1:length(eps)) {
 
-      mod[[index]] <- genlasso::genlasso(y = U %*% y,
+      mod[[index]] <- tryCatch(genlasso::genlasso(y = U %*% y,
                                          X = U %*% X,
                                          D = penalty_matrix,
                                          minlam = minlam,
                                          eps = eps[j],
-                                         svd = TRUE)
-      mod[[index]]["gamma"] <- gamma[i]
-      mod[[index]]["eps"] <- eps[j]
+                                         svd = TRUE),
+                               error = function(e) {
+                                 print(paste0("An error happened when computing the solution path: gamma = ", gamma[i], ", eps = ", eps[j]))
+                                 return(NA)
+                               }
+      )
 
-      index <- index + 1
+      if(all(is.na(mod[[index]]))){
+        mod[[index]] <- NULL
+      } else {
+        mod[[index]]["gamma"] <- gamma[i]
+        mod[[index]]["eps"] <- eps[j]
+        index <- index + 1
+      }
 
     }
   }
