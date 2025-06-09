@@ -32,12 +32,15 @@
 #' @param ref_class a single character string indicating the code (or name) of
 #'   the network reference treatment class.  Only input if the treatment-
 #'   covariate terms should be shared within classes.
+#' @param fit_full a logical value indicating if the full model should be fitted
+#'   (TRUE) or not (FALSE, default).
 #' @param minlam a numeric variable indicating the value of tuning parameter for
 #'   the d's at which the solution path should terminate. Default is 0.
 #' @param gamma a vector of numeric values > 0 indicating the desired ratio of
 #'   the penalty for interaction terms (beta's) to the penalty for the relative
-#'   treatment effects (d's). If only interaction terms are to be penalized,
-#'   input `Inf` (no quotes).
+#'   treatment effects (d's). Default is 0 to only penalize the relative
+#'   treatment effects. If only interaction terms are to be penalized, input
+#'   `Inf` (no quotes).
 #' @param eps a vector of numeric values > 0 indicating the desired
 #'   multiplier(s) for the ridge penalty, which will be implemented if there are
 #'   some parameters for which there is no direct nor indirect evidence in the
@@ -64,8 +67,9 @@ solve_gflnma <- function(y,
                          class1 = NULL,
                          class2 = NULL,
                          ref_class = NULL,
+                         fit_full = FALSE,
                          minlam = 0,
-                         gamma,
+                         gamma = 0,
                          eps = 0.0001,
                          center = TRUE,
                          rescale = TRUE) {
@@ -92,6 +96,12 @@ solve_gflnma <- function(y,
     X <- cbind(X_d, X_beta)
   } else {
     X <- X_d
+  }
+
+  # If full model requested
+  if(fit_full) {
+    param <- U %*% X
+    mod_full <- lm( (U %*% y) ~ -1 + param )
   }
 
   # Now solve `length(gamma)` GFL-NMA problems for each eps
@@ -170,7 +180,11 @@ solve_gflnma <- function(y,
     }
   }
 
-  list("solution" = mod, "par_groups" = par_groups)
+  if(fit_full){
+    list("solution" = mod, "par_groups" = par_groups, "full_RSS" = deviance(mod_full))
+  } else {
+    list("solution" = mod, "par_groups" = par_groups)
+  }
 
 }
 

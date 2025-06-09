@@ -14,8 +14,9 @@ solve_gflnma(
   class1 = NULL,
   class2 = NULL,
   ref_class = NULL,
+  fit_full = FALSE,
   minlam = 0,
-  gamma,
+  gamma = 0,
   eps = 1e-04,
   center = TRUE,
   rescale = TRUE
@@ -58,13 +59,17 @@ if the treatment-covariate terms should be shared within classes.}
 the network reference treatment class.  Only input if the treatment-
 covariate terms should be shared within classes.}
 
+\item{fit_full}{a logical value indicating if the full model should be fitted
+(TRUE) or not (FALSE, default).}
+
 \item{minlam}{a numeric variable indicating the value of tuning parameter for
 the d's at which the solution path should terminate. Default is 0.}
 
 \item{gamma}{a vector of numeric values > 0 indicating the desired ratio of
 the penalty for interaction terms (beta's) to the penalty for the relative
-treatment effects (d's). If only interaction terms are to be penalized,
-input \code{Inf} (no quotes).}
+treatment effects (d's). Default is 0 to only penalize the relative
+treatment effects. If only interaction terms are to be penalized, input
+\code{Inf} (no quotes).}
 
 \item{eps}{a vector of numeric values > 0 indicating the desired
 multiplier(s) for the ridge penalty, which will be implemented if there are
