@@ -201,6 +201,9 @@ tabulate_single_solution_path <- function(x,
     # function
     class(tt) <- c("genlasso_summary", "data.frame")
 
+    # remove row names
+    row.names(tt) <- NULL
+
     tt
 
   }
