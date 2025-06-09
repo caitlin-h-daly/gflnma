@@ -68,13 +68,6 @@ plot_solution_path <- function(gfl_soln,
     xlimits <- xlimits
   }
 
-  # Set up plotting range for y-axis
-  if(is.null(ylimits)) {
-    ylimits <- range(gfl_soln$beta)
-  } else {
-    ylimits <- ylimits
-  }
-
   if(is.null(par_groups)) {
     # If list of parameter groups is not provided, create a list of length 1
     par_groups <- list()
@@ -92,9 +85,25 @@ plot_solution_path <- function(gfl_soln,
     cols <- rainbow(n = nrow(gfl_soln$beta[par_groups[[i]], ]),
                     start = 1/6)  # exclude red
 
+    # If GLS solutions exists, include this in the plot
+    if(exists("bls", gfl_soln)) {
+      x_pts <- c(gfl_soln$lambda, 0)
+      y_pts <- rbind(t(gfl_soln$beta[par_groups[[i]], ]), t(gfl_soln$bls))
+    } else {
+      x_pts <- gfl_soln$lambda
+      y_pts <- t(gfl_soln$beta[par_groups[[i]], ])
+    }
+
+    # Set up plotting range for y-axis
+    if(is.null(ylimits)) {
+      ylimits <- range(y_pts)
+    } else {
+      ylimits <- ylimits
+    }
+
     # Solution path
-    matplot(x = gfl_soln$lambda,
-            y = t(gfl_soln$beta[par_groups[[i]], ]),
+    matplot(x = x_pts,
+            y = y_pts,
             type = "l",
             col = cols,
             lty = 1,
@@ -116,11 +125,11 @@ plot_solution_path <- function(gfl_soln,
     # Add parameter labels to lines
     if(names(par_groups)[i] == "Parameters") {
       text(x = -0.25,
-           y = gfl_soln$beta[par_groups[[i]], ncol(gfl_soln$beta)],
+           y = y_pts[nrow(y_pts),],
            par_groups[[i]] + 1)
     } else {
       text(x = -0.25,
-           y = gfl_soln$beta[par_groups[[i]], ncol(gfl_soln$beta)],
+           y = y_pts[nrow(y_pts),],
            paste0(names(par_groups)[i], "_", (par_groups[[i]] + 1) - par_ind))
     }
 
@@ -128,13 +137,9 @@ plot_solution_path <- function(gfl_soln,
            # List treatments in order of parameter estimates at smallest lambda
            legend = paste0(names(par_groups)[i],
                            "_",
-                           order(gfl_soln$beta[par_groups[[i]],
-                                               ncol(gfl_soln$beta)],
-                                 decreasing = TRUE) + 1),
+                           order(y_pts[nrow(y_pts),], decreasing = TRUE) + 1),
            # Assign colours by parameter estimates at smallest lambda
-           col = cols[order(gfl_soln$beta[par_groups[[i]],
-                                          ncol(gfl_soln$beta)],
-                            decreasing = TRUE)],
+           col = cols[order(y_pts[nrow(y_pts),], decreasing = TRUE)],
            lty = 1)
 
     # Optional: Shade the region containing the lambda values that correspond to
@@ -145,8 +150,8 @@ plot_solution_path <- function(gfl_soln,
                                   gfl_sum[, paste0("delta", penfit)] < abs(delta_penfit_lim))
       rect(xleft = min(gfl_sum$lambda[penfit_lim_index]) ^ lambda_scale,
            xright = max(gfl_sum$lambda[penfit_lim_index]) ^ lambda_scale,
-           ybottom = min(gfl_soln$beta) - diff(range(gfl_soln$beta)),
-           ytop = max(gfl_soln$beta) + diff(range(gfl_soln$beta)),
+           ybottom = min(y_pts[nrow(y_pts),]) - diff(range(y_pts[nrow(y_pts),])),
+           ytop = max(y_pts[nrow(y_pts),]) + diff(range(y_pts[nrow(y_pts),])),
            border = NA,
            col = adjustcolor("blue", alpha = 0.2))
 
