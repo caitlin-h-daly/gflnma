@@ -33,7 +33,10 @@
 #' @references Dias S, Ades AE, Welton NJ, Jansen JP, Sutton AJ. Network meta-
 #' analysis for decision-making. John Wiley & Sons; 2018.
 #'
-#' @param dat a data frame containing the observed data in each study.
+#' @param dat a data frame containing the observed data in each study. This must
+#'   contain all pairwise comparisons within multiarm studies (e.g., B vs. A,
+#'   C vs. A, C vs. B) if a random effects model is desired, so that an estimate
+#'   of tau can be obtained from `netmeta::netmeta()`.
 #' @param studlab the name of the column in `dat` that contains the study
 #'   labels.
 #' @param TE the name of the column in `dat` that contains the estimates of the
@@ -46,6 +49,8 @@
 #' @param treatment2 the name of the column in `dat` that contains the labels of
 #'   the intervention for each relative treatment effect in `TE` (`treatment2`
 #'   vs. `treatment1`).
+#' @param V the name of the column in `dat` that contains the covariance of the
+#'   of the observed relative effects.
 #' @param se1 the name of the column in `dat` that contains the standard error
 #'   of the observed estimates in the comparator arm.
 #' @param sd1 the name of the column in `dat` that contains the standard
@@ -74,6 +79,7 @@ prep_gfl_data <- function(dat,
                           seTE,
                           treatment1,
                           treatment2,
+                          V = NULL,
                           se1 = NULL,
                           sd1 = NULL,
                           n1 = NULL,
@@ -81,32 +87,34 @@ prep_gfl_data <- function(dat,
                           time1 = NULL,
                           modtype = "ME") {
 
-  # Sort the data by study label + reference treatment of the contrast
-  dat <- dat[order(dat[, studlab], dat[, treatment1]), ]
+  # Find most frequent comparator (and hence baseline treatment) in each study
+  study_comp <- table(dat[, studlab], dat[, treatment1])
+  study_base <- data.frame(study = row.names(study_comp),
+                           base_trt = colnames(study_comp)[apply(study_comp, 1, which.max)])
 
   # Denote the baseline treatment in each trial
-  dat$base_trt <- NA
-  dat$base_trt[1] <- dat[1, treatment1]
-  for(i in 2:nrow(dat)) {
-    if(dat[i, studlab] == dat[i - 1, studlab]) {
-      dat$base_trt[i] <- dat$base_trt[i - 1]
-    } else {
-      dat$base_trt[i] <- dat[i, treatment1]
-    }
+  for(i in 1:nrow(dat)){
+    dat$base_trt[i] <- study_base[which(study_base[, "study"] == dat[i, studlab]), "base_trt"]
   }
 
+  # Keep a copy of the data set with all pairwise comparisons for netmeta
+  dat_netmeta <- dat
   # Keep the contrasts where the comparator is the baseline treatment
   dat <- dat[which(dat[, treatment1] == dat$base_trt), ]
+
+  # Sort the data by study label + reference treatment of the contrast
+  dat <- dat[order(dat[, studlab], dat[, treatment1]), ]
+  row.names(dat) <- NULL
 
   # Calculate the covariances of the observed contrasts within multi-arm studies
   # For each trial, denote the number of arms (n_arms), contrast index
   # (contr_ind), column index of covariances (cov_ind2), and covariance of
-  # relative effects (V), which will be useful when we populate the var-cov
+  # relative effects (cov), which will be useful when we populate the var-cov
   # matrix
   dat$n_arms <- NA
   dat$contr_ind <- NA
-  dat$cov_ind2 <- NA
-  dat$V <- 0
+  dat$contr_ind2 <- NA
+  dat$cov <- ifelse(!is.null(V), dat[, V], 0)
   for(i in 1:nrow(dat)) {
 
     dat_sub <- dat[which(dat[, studlab] == dat[i, studlab]), ]
@@ -134,19 +142,23 @@ prep_gfl_data <- function(dat,
                                         which(delta[dat$contr_ind[i], ] != 0)])
     }
 
-    # Add covariance of relative effects, which is equal to the variance of the
-    # arm-level estimate in the baseline arm
-    if(dat$n_arms[i] > 2 & dat$base_trt[i] == dat[i, treatment1]) {
-      if(!is.null(se1)) {
-        dat$V[i] <- dat[i, se1]^2
-      } else if(!is.null(sd1) & !is.null(n1)) {
-        dat$V[i] <- (dat[i, sd1]^2)/dat[i, n1]
-      } else if(!is.null(event1) & !is.null(time1)) {
-        dat$V[i] <- 1/dat[i, event1]
-      } else if(!is.null(event1) & !is.null(n1)) {
-        dat$V[i] <- dat[i, event1]*(dat[i, n1] - dat[i, event1]) / (dat[i, n1] ^ 3)
-      } else if(dat$n_arms[i] > 2 & dat$base_trt[i] != dat[i, treatment1]) {
-        dat$V[i] <- "Something went wrong"
+    if(!is.null(V)) {
+      dat$cov[i] <- ifelse(is.na(dat[i, V]), 0, dat[i, V])
+    } else{
+      # Add covariance of relative effects, which is equal to the variance of the
+      # arm-level estimate in the baseline arm
+      if(dat$n_arms[i] > 2 & dat$base_trt[i] == dat[i, treatment1]) {
+        if(!is.null(se1)) {
+          dat$cov[i] <- dat[i, se1]^2
+        } else if(!is.null(sd1) & !is.null(n1)) {
+          dat$cov[i] <- (dat[i, sd1]^2)/dat[i, n1]
+        } else if(!is.null(event1) & !is.null(time1)) {
+          dat$cov[i] <- 1/dat[i, event1]
+        } else if(!is.null(event1) & !is.null(n1)) {
+          dat$cov[i] <- dat[i, event1]*(dat[i, n1] - dat[i, event1]) / (dat[i, n1] ^ 3)
+        } else if(dat$n_arms[i] > 2 & dat$base_trt[i] != dat[i, treatment1]) {
+          dat$cov[i] <- "Something went wrong"
+        }
       }
     }
   }
@@ -158,7 +170,7 @@ prep_gfl_data <- function(dat,
     # Add the covariances for multi-arm trials
     for(i in 1:nrow(dat)) {
       if(dat$n_arms[i] > 2) {
-        var_cov[i, unlist(dat$cov_ind2[i])] <- dat$V[i]
+        var_cov[i, unlist(dat$contr_ind2[i])] <- dat$cov[i]
       }
     }
 
@@ -171,22 +183,22 @@ prep_gfl_data <- function(dat,
     # To obtain an estimate of tau, we need to fit a RE model via `netmeta`.
 
     # Obtain tau from NMA model fitted via netmeta.
-    net <- netmeta::netmeta(TE = dat[, TE],
-                            seTE = dat[, seTE],
-                            treat1 = dat[, treatment1],
-                            treat2 = dat[, treatment2],
-                            studylab = dat[, studlab],
+    net <- netmeta::netmeta(TE = dat_netmeta[, TE],
+                            seTE = dat_netmeta[, seTE],
+                            treat1 = dat_netmeta[, treatment1],
+                            treat2 = dat_netmeta[, treatment2],
+                            studlab = dat_netmeta[, studlab],
                             common = FALSE)
 
     # Covariances under RE model.
-    dat$V_RE <- ifelse(dat$n_arms > 2, dat$V + (net$tau2 / 2), 0)
+    dat$cov_RE <- ifelse(dat$n_arms > 2, dat$cov + (net$tau2 / 2), 0)
 
     # Random effects var-cov: matrix with all var on diagonal
     var_cov <- diag( ((dat[, seTE])^2) + net$tau2 )
     # Add the covariances for multi-arm trials
     for(i in 1:nrow(dat)) {
       if(dat$n_arms[i] > 2) {
-        var_cov[i, unlist(dat$cov_ind2[i])] <- dat$V_RE[i]
+        var_cov[i, unlist(dat$contr_ind2[i])] <- dat$cov_RE[i]
       }
     }
 
@@ -199,7 +211,6 @@ prep_gfl_data <- function(dat,
   dat$n_arms <- NULL
   dat$contr_ind <- NULL
   dat$contr_ind2 <- NULL
-  dat$cov_ind2 <- NULL
 
   list(dat = dat, var_cov = var_cov, mod_type = mod_type)
 

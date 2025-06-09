@@ -11,6 +11,7 @@ prep_gfl_data(
   seTE,
   treatment1,
   treatment2,
+  V = NULL,
   se1 = NULL,
   sd1 = NULL,
   n1 = NULL,
@@ -20,7 +21,10 @@ prep_gfl_data(
 )
 }
 \arguments{
-\item{dat}{a data frame containing the observed data in each study.}
+\item{dat}{a data frame containing the observed data in each study. This must
+contain all pairwise comparisons within multiarm studies (e.g., B vs. A,
+C vs. A, C vs. B) if a random effects model is desired, so that an estimate
+of tau can be obtained from \code{netmeta::netmeta()}.}
 
 \item{TE}{the name of the column in \code{dat} that contains the estimates of the
 relative treatment effects.}
@@ -38,6 +42,9 @@ vs. \code{treatment1}).}
 \item{treatment2}{the name of the column in \code{dat} that contains the labels of
 the intervention for each relative treatment effect in \code{TE} (\code{treatment2}
 vs. \code{treatment1}).}
+
+\item{V}{the name of the column in \code{dat} that contains the covariance of the
+of the observed relative effects.}
 
 \item{se1}{the name of the column in \code{dat} that contains the standard error
 of the observed estimates in the comparator arm.}
