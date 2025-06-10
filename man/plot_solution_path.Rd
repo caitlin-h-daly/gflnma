@@ -12,7 +12,10 @@ plot_solution_path(
   delta_penfit_lim = NULL,
   par_groups = NULL,
   xlimits = NULL,
-  ylimits = NULL
+  ylimits = NULL,
+  cex_lab = 2,
+  cex_axis = 2,
+  cex_text = 0.8
 )
 }
 \arguments{
@@ -39,6 +42,15 @@ to sets of parameters (excluding reference) to be plotted separately
 \item{xlimits}{numeric vector of length 2, giving the x coordinates range.}
 
 \item{ylimits}{numeric vector of length 2, giving the y coordinates range.}
+
+\item{cex_lab}{a numeric value indicating the expansion factor for the axis
+titles.}
+
+\item{cex_axis}{a numeric value indicating the expansion factor for the axis
+labels.}
+
+\item{cex_text}{a numeric value indicating the expansion factor for the
+superimposed parameter labels.}
 }
 \value{
 One or more plots of the estimated parameters against lambda (the

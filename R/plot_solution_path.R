@@ -33,6 +33,12 @@
 #'   (e.g., d, b1, b2, ...).
 #' @param xlimits numeric vector of length 2, giving the x coordinates range.
 #' @param ylimits numeric vector of length 2, giving the y coordinates range.
+#' @param cex_lab a numeric value indicating the expansion factor for the axis
+#'   titles.
+#' @param cex_axis a numeric value indicating the expansion factor for the axis
+#'   labels.
+#' @param cex_text a numeric value indicating the expansion factor for the
+#'   superimposed parameter labels.
 #'
 #' @return One or more plots of the estimated parameters against lambda (the
 #' penalty factor for d).
@@ -45,7 +51,10 @@ plot_solution_path <- function(gfl_soln,
                                delta_penfit_lim = NULL,
                                par_groups = NULL,
                                xlimits = NULL,
-                               ylimits = NULL) {
+                               ylimits = NULL,
+                               cex_lab = 2,
+                               cex_axis = 2,
+                               cex_text = 0.8) {
 
   if (!inherits(gfl_soln, "genlasso"))
     stop("\'gfl_soln\' must be an object of class `genlasso`.")
@@ -88,7 +97,8 @@ plot_solution_path <- function(gfl_soln,
     # If GLS solutions exists, include this in the plot
     if(exists("bls", gfl_soln)) {
       x_pts <- c(gfl_soln$lambda, 0)
-      y_pts <- rbind(t(gfl_soln$beta[par_groups[[i]], ]), t(gfl_soln$bls))
+      y_pts <- rbind(t(gfl_soln$beta[par_groups[[i]], ]),
+                     t(gfl_soln$bls[par_groups[[i]]]))
     } else {
       x_pts <- gfl_soln$lambda
       y_pts <- t(gfl_soln$beta[par_groups[[i]], ])
@@ -96,10 +106,12 @@ plot_solution_path <- function(gfl_soln,
 
     # Set up plotting range for y-axis
     if(is.null(ylimits)) {
-      ylimits <- range(y_pts)
+      ylimits_temp <- range(y_pts) + c(-0.1, 0.1)
     } else {
-      ylimits <- ylimits
+      ylimits_temp <- ylimits
     }
+
+    par(mar = c(5.1, 5.1, 4.1, 2.1))
 
     # Solution path
     matplot(x = x_pts,
@@ -110,7 +122,9 @@ plot_solution_path <- function(gfl_soln,
             xlab = xlabel,
             ylab = paste0("Coordinates of ", names(par_groups)[i]),
             xlim = xlimits,
-            ylim = ylimits)
+            ylim = ylimits_temp,
+            cex.lab = cex_lab,
+            cex.axis = cex_axis)
 
     # Add horizontal line for reference parameter (d_1 = b1_1 = b2_1 = ... = 0)
     abline(h = 0, col = "red")
@@ -124,13 +138,15 @@ plot_solution_path <- function(gfl_soln,
 
     # Add parameter labels to lines
     if(names(par_groups)[i] == "Parameters") {
-      text(x = -0.25,
+      text(x = xlimits[1],
            y = y_pts[nrow(y_pts),],
-           par_groups[[i]] + 1)
+           labels = par_groups[[i]] + 1,
+           cex = cex_text)
     } else {
-      text(x = -0.25,
+      text(x = xlimits[1],
            y = y_pts[nrow(y_pts),],
-           paste0(names(par_groups)[i], "_", (par_groups[[i]] + 1) - par_ind))
+           labels = paste0(names(par_groups)[i], "_", (par_groups[[i]] + 1) - par_ind),
+           cex = cex_text)
     }
 
     legend("right",
