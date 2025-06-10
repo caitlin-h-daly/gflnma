@@ -2,15 +2,16 @@
 % Please edit documentation in R/plot_solution_path.R
 \name{plot_solution_path}
 \alias{plot_solution_path}
-\title{Plot the primal solution path along with critical points of interest}
+\title{Plot the primal solution path}
 \usage{
 plot_solution_path(
   gfl_soln,
-  gfl_sum,
-  lambda_scale = 1,
-  penfit = "AICc",
-  delta_penfit_lim = NULL,
+  mod_index = NULL,
   par_groups = NULL,
+  gfl_sum = NULL,
+  penfit = NULL,
+  delta_penfit_lim = NULL,
+  lambda_scale = 1,
   xlimits = NULL,
   ylimits = NULL,
   cex_lab = 2,
@@ -21,23 +22,28 @@ plot_solution_path(
 \arguments{
 \item{gfl_soln}{an object of class \code{genlasso}.}
 
-\item{gfl_sum}{an object of class \code{genlasso_summary} produced by the
-\code{genlasso_summary_table()} function.}
+\item{mod_index}{an optional numeric value indicating the index of the
+GFL-NMA problem to plot, if multiple problems were solved by
+\code{solve_gflnma()} (e.g.,if \code{length(gamma)} > 1).}
 
-\item{lambda_scale}{a number indicating the desired rescaling power for the
-presentation of lambda (i.e., lambda_rescaled = lambda ^ \code{lambda_scale}).
-Default is 1.}
+\item{par_groups}{an optional list of lists of grouped indices corresponding
+to sets of parameters (excluding reference) to be plotted separately
+(e.g., d, b1, b2, ...).}
 
-\item{penfit}{a string indicating which penalized fit measure will be used to
-select the models: one of "AIC", "AICc" (default), "BIC", "BICc".}
+\item{gfl_sum}{an optional object of class \code{genlasso_summary} produced by the
+\code{tabulate_solution_path()} function, which is used to determine the
+critical lambda values for which parameters pool or unpool.}
+
+\item{penfit}{an optional string indicating which penalized fit measure will
+be used to select the models: one of "AIC", "AICc", "BIC", "BICc".}
 
 \item{delta_penfit_lim}{an optional number indicating the range of
 delta_\code{penfit} values corresponding to models the user is willing to
 consider. Default is NULL.}
 
-\item{par_groups}{an optional list of lists of grouped indicies corresponding
-to sets of parameters (excluding reference) to be plotted separately
-(e.g., d, b1, b2, ...).}
+\item{lambda_scale}{a number indicating the desired rescaling power for the
+presentation of lambda (i.e., lambda_rescaled = lambda ^ \code{lambda_scale}).
+Default is 1.}
 
 \item{xlimits}{numeric vector of length 2, giving the x coordinates range.}
 
@@ -59,13 +65,14 @@ penalty factor for d).
 \description{
 \code{plot_solution_path()} returns a plot of the primal solution path for objects
 of class \code{genlasso}. User must provide the \code{genlasso} object obtained from
-\code{solve_gflnma()} as well as a \code{genlasso_summary} object obtained from
-\code{genlasso_summary_table()}.
+\code{solve_gflnma()}.
 }
 \details{
-The solution path will draw vertical dashed lines at critical lambda values
-summarized in the \code{genlasso_summary} object. User may draw additional lines
-at specific lambda values on an ad-hoc basis via \code{abline()}.
+To draw vertical dashed lines at critical lambda values for which the
+parameters pool or unpool, the user must provide a \code{genlasso_summary} object
+obtained from \code{tabulate_solution_path()} via the \code{gfl_sum} argument. The user
+may draw additional lines at specific lambda values on an ad-hoc basis via
+\code{abline()}.
 
 The user also has the option to specify a critical region of \code{penfit} values
 through \code{delta_penfit_crit}. See Kong et al. (2024) for recommended rules
