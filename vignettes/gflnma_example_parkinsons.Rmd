@@ -1,0 +1,291 @@
+---
+title: "Demonstration of GFL-NMA via the `gflnma` package"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{GFL-NMA Example: Parkinson's}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(gflnma)
+library(netmeta)
+```
+
+# Data
+
+To illustrate GFL-NMA, we will make use of a network of evidence on 5 treatments
+for Parkinson's disease [Dias 2011]. There are 7 studies in this data set. The 
+outcome reported in each treatment arm is the mean reduction in time off work. 
+The relative effect measure (`TE`) is the mean difference.
+
+Let's examine the data more closely. Note that, since the `gflnma` R package 
+relies on the `netmeta` R package to compute the between-study standard 
+deviation in random effects models, all $\binom{T_i}{2}$ pairwise contrasts in 
+multi-arm trials comparing $T_i$ treatments must be inputted (e.g., 3 contrasts 
+for 3-arm trials, 6 contrast for 4-arm trials, etc.). 
+
+```{r}
+# View data
+dat_parkinsons
+```
+The only multi-arm trial in this data set is Guttman 1997. It compares three 
+treatments, and thus we have three contrasts.
+
+The data set contains arm-level (`mean1`, `sd1`, `n1`, `mean2`, `sd2`, `n2`) and 
+contrast-level data (`TE`, `seTE`). While GFL-NMA requires contrast-level data,
+we have included arm-level data which will later be used to compute the 
+covariance between the relative effects in multi-arm trials.
+
+## Inspect network
+
+We can call upon `netconnection()` from the `netmeta` R package to assess if the 
+network is connected and `netgraph()`, also from the `netmeta` R package, to 
+plot the network diagram.
+
+```{r}
+# Check to see if network is connected
+(netcon_check <- netmeta::netconnection(dat_parkinsons, 
+                                        treat1 = treat1, 
+                                        treat2 = treat2, 
+                                        studlab = studlab))
+
+# Plot the network diagram
+netmeta::netgraph(netcon_check)
+```
+
+The output from `netmeta::netconnection()` tells us there is only one 
+subnetwork, meaning there is a single connected network.
+
+# Derive inputs for GFL-NMA
+
+To implement the GFL-NMA framework, we require 1) a data frame that provides 
+contrast-level data on relative treatment effects vs. a trial-specific reference 
+treatment estimated in each study, 2) the corresponding variance-covariance 
+matrix. `prep_gfl_data()` will derive these outputs based on an inputted data 
+set that contains all pairwise contrasts in multi-arm studies. 
+
+The outputted variance-covariance matrix depends on whether a fixed, random, or
+multiplicative effects model is desired, which must be specified by the 
+`modtype` argument. 
+
+```{r}
+dat_list <- prep_gfl_data(dat = dat_parkinsons, 
+                          TE = "TE",
+                          seTE = "seTE", 
+                          treatment1 = "treat1", 
+                          treatment2 = "treat2",
+                          studlab = "studlab",
+                          sd1 = "sd1", 
+                          n1 = "n1",
+                          modtype = "FE")
+
+(dat <- dat_list$dat)
+
+(var_cov <- dat_list$var_cov)
+
+(mod_type <- dat_list$mod_type)
+```
+
+Notice how the data in the multi-arm study (Guttman 1997) only contains evidence
+on the relative treatment effects vs. placebo.
+
+# Solve GFL-NMA problem
+
+Now that we have the required data inputs, we may solve the GFL-NMA problem via
+the `solve_gflnma()` function. In the code below, we have set `fit_full = TRUE` 
+to indicate that the full NMA model (penalty factor $\lambda = 0$) should be 
+considered when we compare the fit of multiple models (with different treatment
+configurations) along the solution path.
+
+```{r}
+# Solve GFL-NMA problem
+mod <- solve_gflnma(y = dat$TE, 
+                    var_cov = var_cov, 
+                    treatment1 = dat$treat1, 
+                    treatment2 = dat$treat2, 
+                    ref = "Placebo",
+                    fit_full = TRUE)
+```
+
+In addition to outputting information on the solution path, `solve_gflnma()` 
+outputs include `par_groups` which lists the parameter names and indices in the
+solution path; the parameters names and indices are helpful inputs for other 
+functions.
+
+```{r}
+mod$par_groups
+```
+
+## Visualize the solution path
+
+We can plot the solution path using the `plot_solution_path()` function. At a 
+minimum, this function requires the `solution` object outputted by 
+`solve_gflnma()`. We additionally include the `par_groups` object outputted by 
+`solve_gflnma()` to properly label our parameters.
+
+```{r}
+plot_solution_path(gfl_soln = mod$solution, 
+                   par_groups = mod$par_groups,
+                   xlimits = c(-0.25, 5),
+                   cex_lab = 2, cex_axis = 1.5, cex_text = 1)
+```
+
+To better visualize critical $\lambda$ values for which the $d_k$'s pool or 
+unpool, we need to run `tabulate_solution_path`, which is done in the next step.
+
+# Select best fitting model
+
+Along the solution path computed by `solve_gflnma()`, there are multiple points
+where the relative treatment effect parameters $(d_k)$ pool and unpool. We want 
+to compare the fit of these models to select the most appropriate model. 
+`tabulate_solution_path()` computes several penalized model fit statistics for
+each of these models: the Akaike information criterion (AIC), the AIC corrected
+for small sample size (AICc), the Bayesian information criterion (BIC), the BIC
+corrected for small sample size (BICc). deltaAIC, deltaAICc, deltaBIC, and 
+deltaBICc present the computed respective difference between the AIC, AICc, BIC, 
+and BICc of a given model and the model that has the smallest penalized fit.
+
+To compute these model fit statistics, `tabulate_solution_path()` expects the 
+`solution` and `par_groups` objects outputted by `solve_gflnma()`. If the full 
+model can be estimated, `tabulate_solution_path()` expects the residual sum of 
+squares (RSS) for the full model to be inputted as well, and this may be 
+obtained from the `full_RSS` object outputted by `solve_gflnma()`.
+
+```{r}
+# Summarize GFL-NMA model fit statistics
+(mod_sum <- tabulate_solution_path(mod$solution, 
+                                   par_groups = mod$par_groups, 
+                                   full_rss = mod$full_RSS))
+```
+
+To select a sensible parameter pooling configuration (as determined by lambda 
+$(\lambda)$), we recommend examining the AICc. The model that has the smallest 
+AICc can be spotted by assessing whether `deltaAICc` = 0.
+
+```{r}
+best_mod_index <- which(mod_sum$mod_sum_df[, "deltaAICc"] == 0)
+(best_groups <- mod_sum$mod_sum_df[best_mod_index, ]$PooledGroups)
+```
+
+In the model with the smallest AICc, $d_2$ and $d_5$ are pooled.
+
+## Visualize the solution path
+
+We may now visualize critical $\lambda$ values along the solution path by making 
+use of the `mod_sum_list` outputted from `tabulate_solution_path()`. We can also 
+specify the penalized measure of fit for which we want to base our model 
+selection on (e.g., `penfit = "AICc"`), which will then be represented with a 
+red vertical dashed line.
+
+```{r}
+plot_solution_path(gfl_soln = mod$solution, 
+                   par_groups = mod$par_groups,
+                   gfl_sum = mod_sum$mod_sum_list,
+                   penfit = "AICc",
+                   xlimits = c(-0.25, 5),
+                   cex_lab = 2, cex_axis = 1.5, cex_text = 1)
+```
+
+# Recode treatments
+
+To recode the treatments, we may use the `recode_gfl_params()` function. This 
+requires 1) the data set for which we will use to re-run the NMA, 2) the 
+estimated values for $d_k$ for the selected model, and 3) the `par_groups`
+object outputted by `solve_gflnma()`. Additionally, if the GFL-NMA problem was
+solved based on a dataset that only included the character names, we need to 
+input 4) a data frame consisting of the treatment names and codes.
+
+To obtain the estimated values for $d_k$ for the selected model, we can extract
+these from the solution path outputted by `solve_gflnma()`. We first need to 
+specify the $\lambda$ value for the selected model, rounded to 3 decimal places.
+
+```{r}
+best_lambda <- round(mod_sum$mod_sum_df[which(mod_sum$mod_sum_df[, "deltaAICc"] == 0), ]$lambda, 3)
+```
+
+Now we can extract the estimated values for $d_k$ based on this $\lambda$.
+
+```{r}
+best_param_est <- mod$solution[[1]]$beta[, paste0(best_lambda)]
+```
+
+Since the GFL-NMA problem was run on `dat` which only contains the treatment 
+names as character strings, we must construct a data frame consisting of the 
+treatment names and codes.
+
+```{r}
+trt_codes <- data.frame(code = 1:length(unique(c(dat$treat1, dat$treat2))),
+                        trt = c("Placebo", "Bromocriptine", "Cabergoline", 
+                                "Pramipexole", "Ropinirole"))
+```
+
+Now we can obtain the new treatment codes based on the selected GFL-NMA model.
+
+```{r}
+dat_recode <- recode_gfl_params(gfl_dat = dat_parkinsons, 
+                                param_est = best_param_est, 
+                                par_groups = mod$par_groups,
+                                trt_codes = trt_codes)
+
+dat_recode
+```
+
+# Re-run NMA with recongifured treatments
+
+You may re-run the NMA based on the new treatment codes. Here, we will run a 
+frequentist NMA via the `netmeta()` function from the `netmeta` package. 
+
+To label the synthesized relative effects outputted by `netmeta::netmeta()`, we
+have opted to label the new treatment codes first.
+
+```{r}
+# Label recoded treatments
+gfl_codes <- data.frame(code = 1:length(unique(c(dat_recode$treat1_gfl, dat_recode$treat2_gfl))),
+                        trt = c("Placebo", "Bromocriptine or Ropinirole", "Cabergoline", "Pramipexole"))
+dat_recode$treat1_gfl <- factor(dat_recode$treat1_gfl, levels = gfl_codes$code, labels = gfl_codes$trt)
+dat_recode$treat2_gfl <- factor(dat_recode$treat2_gfl, levels = gfl_codes$code, labels = gfl_codes$trt)
+```
+
+Note that `netmeta::netmeta()` does not accept constrasts between the same 
+treatments, so contrasts between pooled treatments need to be removed.
+
+```{r}
+# Drop rows that compare the same pooled treatments
+dat_recode <- dat_recode[-which(dat_recode$treat1_gfl == dat_recode$treat2_gfl), ]
+```
+
+```{r}
+# Run NMA
+net_postgfl <- netmeta::netmeta(TE = TE, 
+                                seTE = seTE, 
+                                treat1 = treat1_gfl, 
+                                treat2 = treat2_gfl, 
+                                studlab = studlab,
+                                data = dat_recode, 
+                                sm = "MD", 
+                                reference = "Placebo",
+                                common = TRUE,
+                                random = FALSE)
+
+net_postgfl
+```
+
+# References
+
+Dias S, Welton NJ, Sutton AJ, Ades AE. NICE DSU Technical Support Document 2: A 
+generalised linear modelling framework for pairwise and network meta-analysis of 
+randomised controlled trials. 2011; last updated September 2016; available from 
+http://www.nicedsu.org.uk
+
+Kong X, Daly CH, Béliveau A. Generalized fused lasso for treatment pooling in 
+network meta-analysis. Stat Med. 2024;43(30):5635-5649. doi:10.1002/sim.10253
+
+
