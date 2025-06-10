@@ -4,7 +4,7 @@
 \alias{recode_gfl_params}
 \title{Recode parameters based on configuration suggested by selected GFL model}
 \usage{
-recode_gfl_params(param_est, gfl_dat, par_groups)
+recode_gfl_params(param_est, gfl_dat, par_groups, trt_codes)
 }
 \arguments{
 \item{param_est}{a vector containing the parameter estimates of the desired
@@ -14,6 +14,10 @@ pooled model.}
 
 \item{par_groups}{a list of parameter indices (excluding reference) in the
 full model.}
+
+\item{trt_codes}{a data frame containing the original treatment
+codes (\code{code}) and names (\code{trt}). This is required if the original data set
+contains the treatment names only.}
 }
 \value{
 a data frame that contains data in \code{gfl_dat}, along with appended
