@@ -54,7 +54,7 @@ recode_gfl_params <- function(param_est, gfl_dat, par_groups, trt_codes) {
     # Set up new class columns
     for(beta in 1:(length(par_groups) - 1)) {
       gfl_dat[i, paste0("treat1_beta", beta, "_gfl")] <- NA
-      gfl_dat[i, paste0("treat3_beta", beta, "_gfl")] <- NA
+      gfl_dat[i, paste0("treat2_beta", beta, "_gfl")] <- NA
     }
 
     # Extract covariate-interaction groupings for covariates
