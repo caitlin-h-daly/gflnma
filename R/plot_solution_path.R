@@ -62,7 +62,7 @@ plot_solution_path <- function(gfl_soln,
                                cex_axis = 2,
                                cex_text = 0.8) {
 
-  if (length(gfl_soln) > 1) {
+  if (length(gfl_soln) > 1 & is.null(mod_index)) {
     stop("Multiple GFL-NMA problems detected. Please specify which problem you
          would like to plot the solution for via `mod_index`.")
   }
