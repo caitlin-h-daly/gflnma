@@ -1,9 +1,10 @@
-#' Determine the design matrix representing the direct evidence in the network
+#' Determine the design matrix corresponding to the RTE-covariate interaction
+#' terms
 #'
 #' @description
 #' `get_cov_design_matrix()` returns a design matrix corresponding to the
-#' treatment- (or class-) covariate interaction terms at the desired treatment-
-#' or class-level. The design matrix is scaled by the standardized
+#' relative treatment effect (RTE)-covariate interaction terms at the desired
+#' treatment- (or class-) level. The design matrix is scaled by the standardized
 #' observed covariates.
 #'
 #' @param x_cov a matrix containing the observed study-level covariate values

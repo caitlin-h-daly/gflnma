@@ -2,7 +2,8 @@
 % Please edit documentation in R/get_cov_design_matrix.R
 \name{get_cov_design_matrix}
 \alias{get_cov_design_matrix}
-\title{Determine the design matrix representing the direct evidence in the network}
+\title{Determine the design matrix corresponding to the RTE-covariate interaction
+terms}
 \usage{
 get_cov_design_matrix(
   x_cov,
@@ -49,7 +50,7 @@ T, the number of unique treatments, if interaction terms at treatment-level).
 }
 \description{
 \code{get_cov_design_matrix()} returns a design matrix corresponding to the
-treatment- (or class-) covariate interaction terms at the desired treatment-
-or class-level. The design matrix is scaled by the standardized
+relative treatment effect (RTE)-covariate interaction terms at the desired
+treatment- (or class-) level. The design matrix is scaled by the standardized
 observed covariates.
 }
