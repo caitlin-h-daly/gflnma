@@ -1,0 +1,520 @@
+---
+title: "Demonstration of GFL-NMR via the `gflnma` package"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{GFL-NMR Example: Atrial Fibrillation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+```{css, echo=FALSE}
+pre {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+pre[class] {
+  max-height: 100px;
+}
+```
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(gflnma)
+library(netmeta)
+```
+
+# Demonstration with a single covariate
+
+## Data
+
+To illustrate GFL-NMR, we will make use of a network of evidence on 17 
+stroke prevention treatments for those with atrial fibrillation [Cooper 2009, 
+van Valkenhoef 2023]. There are 25 studies in this data set. The outcome is the 
+number of patients who experienced a stroke, and we will model the rate of 
+patients who experienced a stroke, which is calculated as event/exposure, where 
+event = 'number of patients who experienced a stroke' and exposure = 'total 
+patient years at risk'. The relative effect measure (`TE`) is the log rate ratio.
+
+The covariate we will adjust for is proportion of patients with prior stroke 
+(`stroke`).
+
+Let's examine the data more closely. Note that, since the `gflnma` R package 
+relies on the `netmeta` R package to compute the between-study standard 
+deviation in random effects models, all $\binom{T_m}{2}$ pairwise contrasts in a 
+multi-arm trial $m$ comparing $T_m$ treatments must be inputted (e.g., 3 
+contrasts for 3-arm trials, 6 contrast for 4-arm trials, etc.).
+
+```{r}
+head(dat_afib, n = 12)
+```
+
+The are several multi-arm trials in this data set. As an example, AFASAK 1 is
+a 3-arm trial and thus we have three contrasts. AFASAK 2 is a 4-arm trial and 
+thus we have six contrasts.
+
+The data set contains arm-level (`event1`, `time1`, `event2`, `time2`) and 
+contrast-level data (`TE`, `seTE`). While GFL-NMR requires contrast-level data,
+we have included arm-level data which will later be used to compute the 
+covariance between the relative effects in multi-arm trials.
+
+### Inspect network
+
+We can call upon `netconnection()` from the `netmeta` R package to assess if the 
+network is connected as well as `netgraph()`, also from the `netmeta` R package, 
+to plot the network diagram.
+
+```{r, fig.dim = c(6, 6)}
+# Check to see if it is connected
+(netcon_check <- netmeta::netconnection(dat_afib, 
+                                        treat1 = treat1, 
+                                        treat2 = treat2, 
+                                        studlab = studlab))
+
+# Plot network diagram
+netmeta::netgraph(netcon_check)
+```
+
+The output from `netmeta::netconnection()` tells us there is only one 
+network, meaning there is a single connected network.
+
+## Derive inputs for GFL-NMR
+
+To implement the GFL-NMR framework, we require 1) a data frame that provides 
+contrast-level data on relative treatment effects vs. a trial-specific reference 
+treatment estimated in each study, and 2) the corresponding variance-covariance 
+matrix. `prep_gfl_data()` will derive these outputs based on an inputted data 
+set that contains all pairwise contrasts in multi-arm studies. 
+
+The outputted variance-covariance matrix depends on whether a fixed, random, or
+multiplicative effects model is desired, which must be specified by the 
+`modtype` argument. See note at the end of this vignette for more details.
+
+```{r}
+dat_list <- prep_gfl_data(dat = dat_afib, 
+                          TE = "TE",
+                          seTE = "seTE", 
+                          treatment1 = "treat1", 
+                          treatment2 = "treat2",
+                          studlab = "studlab",
+                          event1 = "event1", 
+                          time1 = "time1",
+                          modtype = "ME")
+
+head(dat <- dat_list$dat)
+
+head(var_cov <- dat_list$var_cov)
+
+(mod_type <- dat_list$mod_type)
+```
+
+Notice how the data in the multi-arm studies now only contain evidence on the 
+relative treatment effects vs. a study-specific reference treatment. 
+
+We can then extract the study-level summary statistics for the covariates we 
+would like to adjust for. Here, we will adjust for the proportion of patients 
+who previously experienced a stroke, which is saved in the `stroke` column. Note 
+that the covariate variables will be internally scaled by `solve_gflnma()` when 
+we later solve the GFL-NMR problem(s).
+
+```{r}
+# extract the study-level covariate data
+x_cov <- as.matrix(dat$stroke)
+```
+
+## Single problem
+
+We will first demonstrate GFL-NMR based on a single value for `gamma`. This 
+means there is only one GFL-NMR problem to solve. 
+
+### Solve GFL-NMA problem: gamma = 1
+
+Now that we have the required data inputs, we may solve the GFL-NMR problem via
+the `solve_gflnma()` function. Within `solve_gflnma()`, there are some arguments
+that are specific to NMR: `class1`, `class2`, and `ref_class`, which may be used 
+to pre-specify some desired groupings for the relative treatment effect-covariate
+interaction terms (e.g., because there is not enough evidence for one 
+interaction term to be independently estimated. GFL-NMR, however, can group 
+treatment-covariate interaction terms when this is the case, so the user need 
+not do this); `gamma`, which is the ratio of the penalty term for the 
+interaction terms ($\beta_{k,p}$) over the penalty term for the relative 
+treatment effects ($d_k$); `eps`, which is a ridge penalty multiplier - this 
+additional penalty is added when there is not enough data to estimate all 
+parameters - the sparser the data, the more likely a larger ridge penalty is 
+needed; `center`, an option to center the covariates; `rescale`, and option
+to specify the desired scaling of covariates - this is especially important when
+there are multiple covariates as they should all be converted to the same scale 
+to ensure fair penalization.
+
+In this example, we solve the GFL-NMR problem by penalizing the $d_k$'s and 
+$\beta_{k,p}$'s equally by specifying `gamma = 1`. We also specify the ridge 
+penalty multiplier to be `eps = 0.5`. We have kept the default `fit_full = FALSE` 
+as there is not enough evidence to estimate all parameters in a full NMR model 
+($\lambda = 0$). Also, since we are penalizing  one covariate, 
+rescaling is not necessary.
+
+```{r}
+# Solve GFL-NMR problem
+mod <- solve_gflnma(y = dat$TE, 
+                    var_cov = var_cov, 
+                    x_cov = x_cov, 
+                    treatment1 = dat$treat1, 
+                    treatment2 = dat$treat2, 
+                    ref = "1",
+                    fit_full = FALSE,
+                    class1 = NULL, class2 = NULL, ref_class = NULL,
+                    gamma = 1, 
+                    eps = 0.5,
+                    center = FALSE, 
+                    rescale = FALSE)
+```
+In addition to outputting information on the solution path, `solve_gflnma()` 
+outputs include `par_groups` which lists the parameter names and indices in the
+solution path; the parameters names and indices are helpful inputs for other 
+functions.
+
+```{r}
+mod$par_groups
+```
+
+Note "b1" refers to $\beta_{k,1}$, the interaction terms for the covariate in 
+the first column of `x_cov`.
+
+#### Visualize the solution path
+
+We can plot the solution path using the `plot_solution_path()` function. At a 
+minimum, this function requires the `solution` object outputted by 
+`solve_gflnma()`. We additionally include the `par_groups` object outputted by 
+`solve_gflnma()` to properly label our parameters.
+
+```{r, fig.dim = c(7, 6)}
+plot_solution_path(gfl_soln = mod$solution, 
+                   par_groups = mod$par_groups,
+                   xlimits = c(-0.25, 6),
+                   cex_lab = 2, cex_axis = 1.5, cex_text = 1)
+```
+
+Two plots are outputted for the two sets of parameters that are grouped 
+separately: the $d_k$'s and the $\beta_{k,p}$'s.
+
+The limits of x- and y-axis may be set to better visualize the path. This
+may need to be done multiple times to get the desired scale for each plot.
+
+```{r, fig.dim = c(7, 6)}
+plot_solution_path(gfl_soln = mod$solution, 
+                   par_groups = mod$par_groups,
+                   lambda_scale = 1,
+                   xlimits = c(-0.05, 0.5),
+                   #ylimits = c(-0.5, 0.5),
+                   cex_lab = 2, cex_axis = 1.5, cex_text = 1)
+```
+
+Note that, these solution paths should be carefully inspected for extreme 
+values, which may suggest a larger ridge penalty is needed.
+
+To better visualize critical $\lambda$ values for which the $d_k$'s or 
+$\beta_{k,p}$ pool or unpool, we need to run `tabulate_solution_path`, which is 
+done in the next step.
+
+### Select best fitting model
+We can summarize the solution path with `tabulate_solution_path()`. 
+
+```{r, attr.output='style="max-height: 100px;"'}
+# Summarize GFL-NMR model fit statistics
+(mod_sum <- tabulate_solution_path(mod$solution, 
+                                   par_groups = mod$par_groups))
+```
+
+To select a sensible parameter pooling configuration (as determined by lambda 
+$(\lambda)$), we recommend examining the AICc. The model that has the smallest 
+AICc can be spotted by assessing whether `deltaAICc = 0`.
+
+```{r}
+best_mod_index <- which(mod_sum$mod_sum_df[, "deltaAICc"] == 0)
+(best_groups <- mod_sum$mod_sum_df[best_mod_index, ]$PooledGroups)
+```
+
+In the model with the smallest AICc, $d_2,d_3,d_9$, $d_4,d_5, d_7,d_8,d_{10},d_{11},d_{12},d_{13},d_{14},d_{15},d_{16},d_{17}$ are pooled into 
+two treatment groups and all $\beta_{k,1}$ have been shrunk to 0 (since they 
+have been pooled with $\beta_{1,1}$), suggesting that regression is not needed. 
+However, this is likely an artifact of penalizing the $d_k$'s the same way as 
+the $\beta_{k,1}$'s (`gamma = 1`). As such, we recommend considering a range of 
+`gamma`, as demonstrated later.
+
+### Solve GFL-NMA problem: gamma = Inf
+
+Note that it possible to penalize the interaction terms only by specifying 
+`gamma = Inf` in `solve_gflnma()`. `Inf` implies we want to penalize the 
+interaction terms infinitely more times than the relative effects.
+
+```{r}
+# Solve GFL-NMR problem
+mod <- solve_gflnma(y = dat$TE, 
+                    var_cov = var_cov, 
+                    x_cov = x_cov, 
+                    treatment1 = dat$treat1, 
+                    treatment2 = dat$treat2, 
+                    ref = "1",
+                    fit_full = FALSE,
+                    class1 = NULL, class2 = NULL, ref_class = NULL,
+                    gamma = Inf, 
+                    eps = 0.5,
+                    center = FALSE, 
+                    rescale = FALSE)
+```
+
+#### Visualize the solution path
+
+Visually inspect the solution path for any extreme values which may suggest that
+the ridge penalty multiplier needs to be increased.
+
+```{r, fig.dim = c(7, 6)}
+plot_solution_path(gfl_soln = mod$solution, 
+                   par_groups = mod$par_groups,
+                   xlimits = c(-0.1, 1.5),
+                   cex_lab = 2, cex_axis = 1.5, cex_text = 1)
+```
+
+Note that none of the $d_k$'s have shrunk to zero; their estimates only change
+based on the shrunken values of $\beta_{k,1}$. 
+
+### Select best fitting model
+We can summarize the solution path with `tabulate_solution_path()`. 
+
+```{r}
+# Summarize GFL-NMR model fit statistics
+(mod_sum <- tabulate_solution_path(mod$solution, 
+                                   par_groups = mod$par_groups))
+```
+
+To select a sensible parameter pooling configuration (as determined by lambda 
+$(\lambda)$), we recommend examining the AICc. The model that has the smallest 
+AICc can be spotted by assessing whether `deltaAICc = 0`.
+
+```{r}
+best_mod_index <- which(mod_sum$mod_sum_df[, "deltaAICc"] == 0)
+(best_groups <- mod_sum$mod_sum_df[best_mod_index, ]$PooledGroups)
+```
+In the model with the smallest AICc, all $\beta_{k,1}$ have been shrunk to 0 
+(since they have been pooled with $\beta_{1,1}$), suggesting that regression is 
+not needed. Nevertheless, we should still consider a decent range for `gamma`, 
+which will be demonstrated shortly.
+
+#### Visualize the solution path
+
+Let's visualize critical $\lambda$ values along the solution path by making 
+use of the `mod_sum_list` outputted from `tabulate_solution_path()`. Here, we 
+have specified the AICc to be the penalized measure of fit for which we want to 
+base our model selection on (e.g., `penfit = "AICc"`), which is represented with 
+a red vertical dashed line.
+
+```{r, fig.dim = c(7, 6)}
+plot_solution_path(gfl_soln = mod$solution, 
+                   par_groups = mod$par_groups,
+                   gfl_sum = mod_sum$mod_sum_list,
+                   penfit = "AICc",
+                   xlimits = c(-0.5, 2),
+                   cex_lab = 2, cex_axis = 1.5, cex_text = 1)
+```
+
+## Multiple problems
+
+We will now vary the ratio of penalty factors (`gamma`), as well as the ridge 
+multiplier (`eps`), and use the penalized fit measures to determine the most
+suitable model (and `gamma` and `eps` in parallel).
+
+### Solve GFL-NMA problem: multiple gamma and eps
+
+```{r}
+gamma <- c(Inf, seq(0.5, 2, by=0.5))
+eps <- c(0.01, 0.1, 0.5)
+
+# Solve GFL-NMR problem
+mod <- solve_gflnma(y = dat$TE, 
+                    var_cov = var_cov, 
+                    x_cov = x_cov, 
+                    treatment1 = dat$treat1, 
+                    treatment2 = dat$treat2, 
+                    ref = "1",
+                    fit_full = FALSE,
+                    class1 = NULL, class2 = NULL, ref_class = NULL,
+                    gamma = gamma, 
+                    eps = eps,
+                    center = FALSE, 
+                    rescale = FALSE)
+```
+
+#### Visualize the solution path
+
+As multiple GFL-NMR problems have been solved, there are multiple soluton paths
+to consider. Let's hold off on visualizing the solution path for now, until
+we determine the most suitable `gamma` and `eps`.
+
+### Select best fitting model
+
+Summarize the solution path with `tabulate_solution_path()`. 
+
+```{r}
+# Summarize GFL-NMR model fit statistics
+(mod_sum <- tabulate_solution_path(mod$solution, 
+                                   par_groups = mod$par_groups))
+```
+
+Notice how we have multiple outputs for each combination of `gamma` and 
+`eps`.
+
+To select a sensible parameter pooling configuration (as determined by lambda 
+$(\lambda)$), let's examine the AICc. The model that has the smallest 
+AICc can be spotted by assessing whether `deltaAICc = 0`. 
+
+```{r}
+best_mod_index <- which(mod_sum$mod_sum_df[, "deltaAICc"] == 0)
+(best_groups <- mod_sum$mod_sum_df[best_mod_index, ]$PooledGroups)
+```
+
+In the model with the smallest AICc, $d_3,d_{17}$, $d_4,d_5,d_7,d_8,d_{10},d_{11},d_{12},d_{13},d_{14},d_{15},d_{16}$, and 
+$d_9, d_{15}$ are pooled into three treatment groups. Most interaction terms
+have been shrunk to 0 (i.e., those pooled with $\beta_{1,1}$), but 
+$\beta_{3,1}, \beta_{11,1}$ have been pooled together as a non-zero interaction 
+group and $\beta_{6,1}$ is a standalone non-zero interaction term.
+
+#### Visualize the solution path
+
+Let's now visualize critical $\lambda$ values along the solution path that 
+contains the best model. We need to first find this solution path, and the
+`find_best_gfl_soln()` helper function can help us with this.
+
+```{r}
+(best_model_index <- find_best_gfl_soln(mod_sum, "AICc"))
+```
+
+Now we can plot the solution path for the GFL-NMR problem through specifying
+this problem index in the `mod_index` argument.
+
+```{r, fig.dim = c(7, 6)}
+plot_solution_path(gfl_soln = mod$solution, 
+                   mod_index = best_model_index, 
+                   par_groups = mod$par_groups,
+                   gfl_sum = mod_sum$mod_sum_list,
+                   penfit = "AICc",
+                   xlimits = c(-0.5, 5),
+                   cex_lab = 2, cex_axis = 1.5, cex_text = 1)
+```
+
+### Recode parameters
+
+To recode the treatments, we may use the `recode_gfl_params()` function. This 
+requires 1) the data set for which we will use to re-run the NMR, 2) the 
+estimated values for $d_k$ and $\beta_{k,p}$ for the selected model, and 3) the 
+`par_groups` object outputted by `solve_gflnma()`. 
+
+To obtain the estimated values for $d_k$ and $\beta_{k,p}$ for the selected 
+model, we can extract these from the solution path outputted by 
+`solve_gflnma()`. We first need to specify the $\lambda$ value for the selected 
+model, rounded to 3 decimal places.
+
+```{r}
+best_lambda <- round(mod_sum$mod_sum_df[which(mod_sum$mod_sum_df[, "deltaAICc"] == 0), ]$lambda, 3)
+```
+
+Now we can extract the estimated values for $d_k$ and $\beta_{k,p}$ based on 
+this $\lambda$.
+
+```{r}
+best_param_est <- mod$solution[[best_model_index]]$beta[, paste0(best_lambda)]
+```
+Now we can obtain the new treatment codes based on the selected GFL-NMR model.
+Here, we add the codes to the data set outputted by `prep_gfl_data()`, as we 
+will be using this data set to fit the NMR model.
+
+```{r}
+dat_recode <- recode_gfl_params(gfl_dat = dat, 
+                                param_est = best_param_est, 
+                                par_groups = mod$par_groups)
+
+dat_recode
+```
+
+Note we will now estimate 6 relative treatment effects and 2 interaction terms 
+(the third interaction term was shrunk to 0).
+
+```{r}
+# relative treatment effect groups
+sort(unique(c(dat_recode$treat1_gfl, dat_recode$treat2_gfl)))
+# interaction terms
+sort(unique(c(dat_recode$treat1_beta1_gfl, dat_recode$treat2_beta1_gfl)))
+```
+
+### Re-run NMR with reconfigured parameters
+
+We can now fit a multiplicative NMR model by coding the appropriate model in a 
+Bayesian framework. It also possible to fit a multiplicative NMR model using the
+`lm()` function - we will add a function to the `gflnma` package to enable this 
+soon.
+
+\
+\
+
+# Demonstration with multiple covariates
+
+Coming soon!
+
+\
+\
+
+# Note on fixed vs. random vs. multiplicative effects
+
+The NMR model can be written in the form
+$$ \mathbf{y} = \mathbf{XB} + \boldsymbol{\epsilon}  $$
+where $\mathbf{y} = (\mathbf{y}_1, ..., \mathbf{y}_M)'$, $\mathbf{y}_m, m = 1, \dots, M$ 
+are vectors of the $T_m$ relative treatment effects vs. a study-specific 
+reference treatment estimated in each study $m$, $\mathbf{X}$ is
+a design matrix that indicates the parameters in $\mathbf{B} = (\mathbf{d} ~ \boldsymbol{\beta}_1 \dots \boldsymbol{\beta}_p)$ 
+being estimated in each study, and $\boldsymbol{\epsilon}$ is a multivariate 
+normally distributed term with known covariance matrix. The covariance matrix is 
+based on whether a fixed, random, or multiplicative effects model is assumed.
+
+\
+
+For a fixed effect model, 
+$$ \mathbf{y}_m \sim \text{MVN}(\mathbf{XB}, \mathbf{V}_m) $$
+where $\mathbf{V}_m$ is the variance-covariance matrix corresponding to the 
+reported variances (and covariances) of the observed $\mathbf{y}_m$.
+
+\
+
+For a random effects model, 
+$$ \mathbf{y}_m \sim \text{MVN}(\mathbf{XB}, \mathbf{\Omega}_m + \mathbf{V}_m) $$
+where 
+$$\mathbf{\Omega}_m = \begin{pmatrix}
+         \tau^2 & 0.5\tau^2 & \cdots & 0.5\tau^2 \\
+       0.5\tau^2 & \tau^2 & \cdots & 0.5\tau^2 \\
+        \vdots & \vdots & \ddots & \vdots \\
+        0.5\tau^2  & 0.5\tau^2 & \cdots & \tau^2
+    \end{pmatrix}$$
+and is of dimension $(T_m - 1) \times (T_m - 1)$.
+
+\
+
+For a multiplicative effects model, 
+$$ \mathbf{y}_m \sim \text{MVN}(\mathbf{XB}, \phi \mathbf{V}_m) $$
+such that that variance of the observed relative treatment effects are known
+up to some constant $\phi$.
+
+\
+\
+
+# References
+
+Cooper NJ, Sutton AJ, Morris D, Ades AE, Welton NJ. Addressing between-study 
+heterogeneity and inconsistency in mixed treatment comparisons: Application to 
+stroke prevention treatments in individuals with non-rheumatic atrial 
+fibrillation. Stat Med. 2009;28:1861-1881. doi:/10.1002/sim.3594
+
+van Valkenhoef G. (2023). gemtc: Network Meta-Analysis Using Bayesian Methods. 
+CRAN package. R package version 1.0-2. 
