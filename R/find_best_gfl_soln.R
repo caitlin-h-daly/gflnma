@@ -1,13 +1,10 @@
 #' Determine the GFL problem which has the best solution
 #'
 #' @description
-#' `find_best_gfl()` returns the index/indicies of the GFL problem for which the
-#' solution contains the the model with the best penalized fit overall.
+#' `find_best_gfl_soln()` returns the index/indicies of the GFL problem for
+#' which the solution contains the the model with the best penalized fit overall.
 #'
-#' @param mod_sum_list a list of all model summaries obtained from
-#'   `tabulate_solution_path()`.
-#' @param mod_sum_df a data frame of all model summaries obtained from
-#'   `tabulate_solution_path()`.
+#' @param mod_sum an object outputted from `tabulate_solution_path()`.
 #' @param penfit a string indicating which penalized fit measure will be used to
 #'   select the models: one of "AICc" or "BICc".
 #'
@@ -15,7 +12,10 @@
 #' problem(s) whose solution contains the model with the best penalized fit.
 #' @export
 #'
-find_best_gfl <- function(mod_sum_list, mod_sum_df, penfit = "AICc") {
+find_best_gfl_soln <- function(mod_sum, penfit = "AICc") {
+
+  mod_sum_list <- mod_sum$mod_sum_list
+  mod_sum_df <- mod_sum$mod_sum_df
 
   # Only mod_sum_df has recalculated delta`penfit` statistics across all GFL
   # problems (mod_sum_list calculates delta`penfit` within GFL problems), so we
