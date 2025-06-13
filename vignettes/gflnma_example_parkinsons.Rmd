@@ -28,9 +28,9 @@ The relative effect measure (`TE`) is the mean difference.
 
 Let's examine the data more closely. Note that, since the `gflnma` R package 
 relies on the `netmeta` R package to compute the between-study standard 
-deviation in random effects models, all $\binom{T_i}{2}$ pairwise contrasts in 
-multi-arm trials comparing $T_i$ treatments must be inputted (e.g., 3 contrasts 
-for 3-arm trials, 6 contrast for 4-arm trials, etc.). 
+deviation in random effects models, all $\binom{T_m}{2}$ pairwise contrasts in a 
+multi-arm trial $m$ comparing $T_m$ treatments must be inputted (e.g., 3 
+contrasts for 3-arm trials, 6 contrast for 4-arm trials, etc.). 
 
 ```{r}
 # View data
@@ -50,7 +50,7 @@ We can call upon `netconnection()` from the `netmeta` R package to assess if the
 network is connected and `netgraph()`, also from the `netmeta` R package, to 
 plot the network diagram.
 
-```{r}
+```{r, fig.dim = c(6, 6)}
 # Check to see if network is connected
 (netcon_check <- netmeta::netconnection(dat_parkinsons, 
                                         treat1 = treat1, 
@@ -62,19 +62,19 @@ netmeta::netgraph(netcon_check)
 ```
 
 The output from `netmeta::netconnection()` tells us there is only one 
-subnetwork, meaning there is a single connected network.
+network, meaning there is a single connected network.
 
 # Derive inputs for GFL-NMA
 
 To implement the GFL-NMA framework, we require 1) a data frame that provides 
 contrast-level data on relative treatment effects vs. a trial-specific reference 
-treatment estimated in each study, 2) the corresponding variance-covariance 
+treatment estimated in each study, and 2) the corresponding variance-covariance 
 matrix. `prep_gfl_data()` will derive these outputs based on an inputted data 
 set that contains all pairwise contrasts in multi-arm studies. 
 
 The outputted variance-covariance matrix depends on whether a fixed, random, or
 multiplicative effects model is desired, which must be specified by the 
-`modtype` argument. 
+`modtype` argument. See note at the end of this vignette for more details.
 
 ```{r}
 dat_list <- prep_gfl_data(dat = dat_parkinsons, 
@@ -131,7 +131,7 @@ minimum, this function requires the `solution` object outputted by
 `solve_gflnma()`. We additionally include the `par_groups` object outputted by 
 `solve_gflnma()` to properly label our parameters.
 
-```{r}
+```{r, fig.dim = c(7, 6)}
 plot_solution_path(gfl_soln = mod$solution, 
                    par_groups = mod$par_groups,
                    xlimits = c(-0.25, 5),
@@ -168,7 +168,7 @@ obtained from the `full_RSS` object outputted by `solve_gflnma()`.
 
 To select a sensible parameter pooling configuration (as determined by lambda 
 $(\lambda)$), we recommend examining the AICc. The model that has the smallest 
-AICc can be spotted by assessing whether `deltaAICc` = 0.
+AICc can be spotted by assessing whether `deltaAICc = 0`.
 
 ```{r}
 best_mod_index <- which(mod_sum$mod_sum_df[, "deltaAICc"] == 0)
@@ -185,7 +185,7 @@ specify the penalized measure of fit for which we want to base our model
 selection on (e.g., `penfit = "AICc"`), which will then be represented with a 
 red vertical dashed line.
 
-```{r}
+```{r, fig.dim = c(7, 6)}
 plot_solution_path(gfl_soln = mod$solution, 
                    par_groups = mod$par_groups,
                    gfl_sum = mod_sum$mod_sum_list,
@@ -200,7 +200,7 @@ To recode the treatments, we may use the `recode_gfl_params()` function. This
 requires 1) the data set for which we will use to re-run the NMA, 2) the 
 estimated values for $d_k$ for the selected model, and 3) the `par_groups`
 object outputted by `solve_gflnma()`. Additionally, if the GFL-NMA problem was
-solved based on a dataset that only included the character names, we need to 
+solved based on a data set that only included the character names, we need to 
 input 4) a data frame consisting of the treatment names and codes.
 
 To obtain the estimated values for $d_k$ for the selected model, we can extract
@@ -240,7 +240,7 @@ dat_recode
 
 # Re-run NMA with recongifured treatments
 
-You may re-run the NMA based on the new treatment codes. Here, we will run a 
+Now, we may re-run the NMA based on the new treatment codes. Here, we will run a 
 frequentist NMA via the `netmeta()` function from the `netmeta` package. 
 
 To label the synthesized relative effects outputted by `netmeta::netmeta()`, we
@@ -277,6 +277,52 @@ net_postgfl <- netmeta::netmeta(TE = TE,
 
 net_postgfl
 ```
+
+\
+\
+
+# Note on fixed vs. random vs. multiplicative effects
+
+The NMA model can be written in the form
+$$ \mathbf{y} = \mathbf{Xd} + \boldsymbol{\epsilon}  $$
+where $\mathbf{y} = (\mathbf{y}_1, ..., \mathbf{y}_M)'$, $\mathbf{y}_m, m = 1, \dots, M$ 
+are vectors of the $T_m$ relative treatment effects vs. a study-specific 
+reference treatment estimated in each study $m$, $\mathbf{X}$ is
+a design matrix that indicates the relative treatment effects $\mathbf{d}$ 
+being estimated in each study, and $\boldsymbol{\epsilon}$
+is a multivariate normally distributed term with known covariance matrix. The
+covariance matrix is based on whether a fixed, random, or multiplicative effects
+model is assumed.
+
+\
+
+For a fixed effect model, 
+$$ \mathbf{y}_m \sim \text{MVN}(\mathbf{Xd}, \mathbf{V}_m) $$
+where $\mathbf{V}_m$ is the variance-covariance matrix corresponding to the 
+reported variances (and covariances) of the observed $\mathbf{y}_m$.
+
+\
+
+For a random effects model, 
+$$ \mathbf{y}_m \sim \text{MVN}(\mathbf{Xd}, \mathbf{\Omega}_m + \mathbf{V}_m) $$
+where 
+$$\mathbf{\Omega}_m = \begin{pmatrix}
+         \tau^2 & 0.5\tau^2 & \cdots & 0.5\tau^2 \\
+       0.5\tau^2 & \tau^2 & \cdots & 0.5\tau^2 \\
+        \vdots & \vdots & \ddots & \vdots \\
+        0.5\tau^2  & 0.5\tau^2 & \cdots & \tau^2
+    \end{pmatrix}$$
+and is of dimension $(T_m - 1) \times (T_m - 1)$.
+
+\
+
+For a multiplicative effects model, 
+$$ \mathbf{y}_m \sim \text{MVN}(\mathbf{Xd}, \phi \mathbf{V}_m) $$
+such that that variance of the observed relative treatment effects are known
+up to some constant $\phi$.
+
+\
+\
 
 # References
 
