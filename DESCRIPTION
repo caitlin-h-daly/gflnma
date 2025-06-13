@@ -2,9 +2,12 @@ Package: gflnma
 Title: Generalized Fused Lasso for Regularization in Network Meta-Analysis
 Version: 0.0.0.9000
 Authors@R: 
-    person("Caitlin", "Daly", , "caitlin.daly@uwaterloo.ca", role = c("aut", "cre"))
+    c(person("Caitlin", "Daly", , "caitlin.daly@uwaterloo.ca", role = c("aut", "cre")),
+    person("Audrey", "Béliveau", , "audrey.beliveau@uwaterloo.ca", role = c("aut")))
+Maintainer: Caitlin Daly <caitlin.daly@uwaterloo.ca>
 Description: This package facilitates the application of a generalized fused
-lasso (GFL) framework for network meta-analysis (NMA), developed by Kong et al. (2024).
+  lasso (GFL) framework for network meta-analysis (NMA), developed by 
+  Kong et al. (2024).
 License: CC BY 4.0
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

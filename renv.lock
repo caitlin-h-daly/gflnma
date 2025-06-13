@@ -11,7 +11,7 @@
   "Packages": {
     "Matrix": {
       "Package": "Matrix",
-      "Version": "1.7-0",
+      "Version": "1.7-3",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
@@ -24,7 +24,7 @@
         "stats",
         "utils"
       ],
-      "Hash": "1920b2f11133b12350024297d8a4ff4a"
+      "Hash": "fb578c2b5d796882c60e9f770352f7c4"
     },
     "cli": {
       "Package": "cli",
