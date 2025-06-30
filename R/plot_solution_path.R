@@ -86,13 +86,6 @@ plot_solution_path <- function(gfl_soln,
     stop("\'gfl_sum\' must be an object of class `genlasso_summary` obtained
          from `genlasso_summary_table()`.")
 
-  # Create string for x-axis label if lambda is rescaled
-  xlabel <- if(lambda_scale != 1) {
-    bquote(lambda[d]  ^ .(lambda_scale))
-    } else {
-      bquote(lambda[d])
-    }
-
   # Set up plotting range for x-axis
   if(is.null(xlimits)) {
     xlimits <- c(0, (gfl_soln$lambda[1] ^ lambda_scale) * 1.1)
@@ -112,6 +105,21 @@ plot_solution_path <- function(gfl_soln,
 
   # Now plot the solution paths
   for(i in 1:length(par_groups)) {
+
+    # Create string for x-axis label, depending on parameter group and lambda_scale
+    xlabel <- if(i == 1) {
+      if(lambda_scale != 1) {
+        bquote(lambda[d] ^ .(lambda_scale))
+      } else {
+        bquote(lambda[d])
+      }
+    } else {
+      if(lambda_scale != 1) {
+        bquote(lambda[beta]*'= ('*.(gfl_soln$gamma)*lambda[d]*')' ^ .(lambda_scale))
+      } else {
+        bquote(lambda[beta]*'= '*.(gfl_soln$gamma)*lambda[d])
+      }
+    }
 
     # Line colours
     cols <- rainbow(n = nrow(gfl_soln$beta[par_groups[[i]], ]),
@@ -137,7 +145,7 @@ plot_solution_path <- function(gfl_soln,
     par(mar = c(5.1, 5.1, 4.1, 2.1))
 
     # Solution path
-    matplot(x = x_pts ^ lambda_scale,
+    matplot(x = ((gfl_soln$gamma ^ (i > 1)) * x_pts) ^ lambda_scale,
             y = y_pts,
             type = "l",
             col = cols,
