@@ -88,14 +88,14 @@ plot_solution_path <- function(gfl_soln,
 
   # Create string for x-axis label if lambda is rescaled
   xlabel <- if(lambda_scale != 1) {
-    bquote(lambda  ^ .(lambda_scale))
+    bquote(lambda[d]  ^ .(lambda_scale))
     } else {
-      bquote(lambda)
+      bquote(lambda[d])
     }
 
   # Set up plotting range for x-axis
   if(is.null(xlimits)) {
-    xlimits <- c(0, gfl_soln$lambda[1] * 1.1)
+    xlimits <- c(0, (gfl_soln$lambda[1] ^ lambda_scale) * 1.1)
   } else {
     xlimits <- xlimits
   }
@@ -137,7 +137,7 @@ plot_solution_path <- function(gfl_soln,
     par(mar = c(5.1, 5.1, 4.1, 2.1))
 
     # Solution path
-    matplot(x = x_pts,
+    matplot(x = x_pts ^ lambda_scale,
             y = y_pts,
             type = "l",
             col = cols,
@@ -175,7 +175,7 @@ plot_solution_path <- function(gfl_soln,
     # Add parameter labels to lines
     if(names(par_groups)[i] == "Parameters") {
       text(x = xlimits[1],
-           y = y_pts[nrow(y_pts),],
+           y = y_pts[nrow(y_pts), ],
            labels = par_groups[[i]] + 1,
            cex = cex_text)
     } else {
